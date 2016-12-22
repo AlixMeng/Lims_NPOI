@@ -26,9 +26,9 @@ namespace nsLims_NPOI
             //MergePDF mpf = new MergePDF();
             //DocXAction dxa = new DocXAction();
 
-            //IWorkbook wb = cln.loadExcelWorkbookI("D:\\默认附页 - 副本.xlsx");
-            //wb.GetSheetAt(0).AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(3, 3, 0, 7));
-            //cln.saveExcelWithoutAsk("D:\\默认附页_001.xlsx", wb);
+            IWorkbook wb = cln.loadExcelWorkbookI("D:\\默认附页 - 副本.xlsx");
+            wb.GetSheetAt(0).AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(3, 3, 0, 7));
+            cln.saveExcelWithoutAsk("D:\\默认附页_001.xlsx", wb);
             //fcc.SaveExcelWorkbookAsPDF("D:\\原始记录.xlsx", "D:\\mrfy.pdf");
             //FileConvertClass.excelRefresh("D:\\3333 - 副本.xls");
             //ISheet sheet = cln.loadExcelWorkbookI("D:\\默认附页.xlsx").GetSheetAt(0);
