@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lims_NPOI", "Lims_NPOI\Lims_NPOI.csproj", "{EBFAE04E-258C-46D8-82C6-2719AB367025}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EBFAE04E-258C-46D8-82C6-2719AB367025}.Debug|x86.ActiveCfg = Debug|x86
+		{EBFAE04E-258C-46D8-82C6-2719AB367025}.Debug|x86.Build.0 = Debug|x86
+		{EBFAE04E-258C-46D8-82C6-2719AB367025}.Release|x86.ActiveCfg = Release|x86
+		{EBFAE04E-258C-46D8-82C6-2719AB367025}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
