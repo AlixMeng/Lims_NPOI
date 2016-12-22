@@ -427,7 +427,7 @@ namespace nsLims_NPOI
             try
             {
                 //NPOI自动换行后行高读取值不变,需要用COM组件重新保存
-                //FileConvertClass.excelRefresh(filePath);
+                FileConvertClass.excelRefresh(filePath);
                 IWorkbook wb = loadExcelWorkbookI(filePath);
                 ISheet sheet = wb.GetSheetAt(sheetIndex);
                 int pc = stretchLastRowHeight(sheet, startHeadRow, endHeadRow, startCol, endCol);
