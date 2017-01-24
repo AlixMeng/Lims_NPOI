@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -13,6 +14,11 @@ namespace nsLims_NPOI
             InitializeComponent();
         }
 
+        public static void alert(object str)
+        {
+            string s = str.ToString();
+            MessageBox.Show(s);
+        }
        
 
         private void button1_Click(object sender, EventArgs e)
@@ -22,24 +28,35 @@ namespace nsLims_NPOI
             classLims_NPOI cln = new classLims_NPOI();
             //ConvertbyPrinter cbp = new ConvertbyPrinter();
             //ImgConvert ic = new ImgConvert();
-            FileConvertClass fcc = new FileConvertClass();
+            //FileConvertClass fcc = new FileConvertClass();
             //MergePDF mpf = new MergePDF();
             //DocXAction dxa = new DocXAction();
+            //classExcelMthd cem = new classExcelMthd();
 
-            //IWorkbook wb = cln.loadExcelWorkbookI("D:\\默认附页_001.xlsx");
-            //wb.GetSheetAt(0).AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(3, 3, 0, 7));
-            //cln.saveExcelWithoutAsk("D:\\默认附页_001.xlsx", wb);
-            cln.stretchLastRowHeight("D:\\默认附页_001.xlsx", 0, 1, 2, 0, 7);
-            //fcc.SaveExcelWorkbookAsPDF("D:\\原始记录.xlsx", "D:\\mrfy.pdf");
-            //FileConvertClass.excelRefresh("D:\\3333 - 副本.xls");
-            //ISheet sheet = cln.loadExcelWorkbookI("D:\\默认附页.xlsx").GetSheetAt(0);
-            //sheet.ShiftRows(5, 7, 1, true, false);
-            //IRow row = sheet.GetRow(2);
-            //float h = row.HeightInPoints;
-            //int i = (int)h;
+            string[] flags = { "&[样品编号]", "&[备注]" };
+            cln.protectExcel("D:\\默认首页.xls", 0, flags, "123");
+
 
 
             #region
+            //cem.protectWorkBook("D:\\TEST.xls", "123");
+            //cln.protectSheets("D:\\TEST.xls", "123");
+            //cln.stretchLastRowHeight("D:\\TEST.xls", 0);
+            //ISheet sheet = cln.loadExcelSheetI("D:\\TEST.xls", 0);
+            //List<int> list = cln.getNewPageFirstRow(sheet);            
+            //bool isnew = cln.IsNewPageRow(sheet, 113);
+
+            //cln.dealMergedAreaInPages("D:\\TEST.xls", 0);
+            //cln.stretchLastRowHeight("D:\\TEST.xls", 0);
+
+            //IWorkbook wb = cln.loadExcelWorkbookI("D:\\默认封面.xls");
+            //classLims_NPOI.LockSheet(wb, 0, "lims@123");
+            //wb.GetSheetAt(0).GetRow(22).GetCell(0).SetCellValue("成都产品质量检验研究院有限责任公司");
+            //wb.GetSheetAt(0).GetRow(23).GetCell(0).SetCellValue("(四川省产品质量监督检验检测院/");
+            //wb.GetSheetAt(0).ForceFormulaRecalculation = true;//计算Excel公式
+            //cln.saveExcelWithoutAsk("D:\\默认封面_add.xls", wb);            
+            //fcc.addImage2Excel_byOffice("D:\\默认封面.xls", 0, "D:\\label2.png", "&[二维码]", 47.5, 47.5);
+            //FileConvertClass.excelRefresh("D:\\默认封面.xls");
 
             //object[] obj1 = { "20161117080005", "20161117080005", "20161117080005" };
             //object[] obj2 = { "001", "001", "001" };
@@ -94,12 +111,15 @@ namespace nsLims_NPOI
             //object[] obj2 = { "&[检验单位]", "检验单位名称：检验单位" };
             //object[] obj = { obj1, obj2 };
 
-            //object[] oh = { "序号", "标准值", "检测项", "分析项", "实测值", "单位", "单项结论", "小样" };
-            //object[] o1 = { 1, "/", "外观", "10001001", 2.20, "cm", "/", "002" };
-            //object[] o2 = { 2, "/", "外观", "10001001", 2.20, "cm", "/", "002" };
-            //object[] o3 = { 3, "/", "外观", "10001001", 2.20, "cm", "/", "002" };
-            //object[] o4 = { 4, "/", "外观", "10001001", 2.20, "cm", "/", "002" };
+            //object[] oh = { "序号", "技术要求", "检测项目", "分析项", "实测值", "单位", "单项结论", "小样" };
+            //object[] o1 = { 1, ">20", "外观", "颜色", 2.20, "cm", "合格", "001" };
+            //object[] o2 = { 2, ">10", "外观", "对比度", 2.20, "cm", "合格", "001" };
+            //object[] o3 = { 3, ">30", "CCCo", "10001001", 2.20, "cm*pasc/mg*L", "合格", "002" };
+            //object[] o4 = { 4, ">20", "CCCo", "2233", 2.20, "cm", "合格", "002" };
             //object[] o = { oh, o1, o2, o3, o4, };
+
+            //object[] colListC = { "检测项目", "单项结论" };
+
 
             #endregion
 

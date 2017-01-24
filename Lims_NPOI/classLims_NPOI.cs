@@ -23,7 +23,11 @@ namespace nsLims_NPOI
         }
 
         //A4纸的固定长度为677.75,倍数为20
-        private static double PAGE_HEIGHT = 57 * 14.25 * 20;//-2170;//16245
+        //61 * 13.5 * 20 + 20.25 * 20;//16875
+        //58 * 14.25 * 20 + 19.75 * 20;//16925
+        //41 * 20 * 20 + 22.5 * 20;//16850
+        private static double PAGE_HEIGHT = 16430;//手动设置的测试总高
+        private static double CM_POUND = 28.35;
         //A4纸的像素宽度为84.5,,倍数为278
         private static double PAGE_WIDTH = 84.5;
         //workbook
@@ -62,7 +66,7 @@ namespace nsLims_NPOI
             sw.WriteLine("当前时间：" + DateTime.Now.ToString());
             sw.WriteLine("异常信息：" + ex.Message);
             sw.WriteLine("异常对象：" + ex.Source);
-            sw.WriteLine("调用堆栈：\n" + ex.StackTrace.Trim());
+            sw.WriteLine("调用堆栈：\n" + ex.StackTrace);
             sw.WriteLine("触发方法：" + ex.TargetSite);
             sw.WriteLine();
             sw.Close();
@@ -272,28 +276,47 @@ namespace nsLims_NPOI
             return range;
         }
 
-        //返回sheet总页数
+        /// <summary>
+        /// 返回sheet重复区域
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <returns>整型数组,分别为起始行号,结束行号,起始列号,结束列号</returns>
+        private int[] getRepeatingRowsRange(ISheet sheet)
+        {
+            if (sheet.RepeatingRows == null || sheet.RepeatingRows.IsFullRowRange == false) { return null; }
+            int[] ir = new int[] { -1, -1, -1, -1 };
+            ir[0] = sheet.RepeatingRows.FirstRow;
+            ir[1] = sheet.RepeatingRows.LastRow;
+            ir[2] = sheet.RepeatingRows.FirstColumn;
+            ir[3] = sheet.RepeatingRows.LastColumn;
+            if (sheet.RepeatingRows.IsFullColumnRange == false)
+            {
+                ir[2] = getColumnRange(sheet)[0];
+                ir[3] = getColumnRange(sheet)[1];
+            }
+            return ir;
+
+        }
+
+
         /// <summary>
         /// 返回sheet总页数
         /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="sheetIndex"></param>
+        /// <param name="sheet"></param>
         /// <param name="startHead">表头起始行号</param>
         /// <param name="endHead">表头结束行号</param>
         /// <returns>sheet总页数</returns>
-        public int getSheetPageCount(string filePath, int sheetIndex, int startHead, int endHead)
+        private int getSheetPageCount(ISheet sheet, int startHead, int endHead)
         {
             try
             {
-                FileConvertClass.excelRefresh(filePath);
-                ISheet sheet = loadExcelSheetI(filePath, sheetIndex);
-                int fRow = endHead+1;
+                int fRow = endHead + 1;
                 int lRow = sheet.LastRowNum;
                 double totalH = 0; //总行高
                 int pageCount = 0; //页码计数
                 double headH = 0; //表头高度
                 headH = (sheet.GetMargin(MarginType.TopMargin) + sheet.GetMargin(MarginType.BottomMargin)) / 0.39370078740157483;
-                headH = headH * 27.682 * 20;
+                headH = headH * CM_POUND * 20;
                 for (int i = startHead; i <= endHead; i++)
                 {
                     headH += sheet.GetRow(i).Height;
@@ -307,7 +330,7 @@ namespace nsLims_NPOI
                     {
                         tempH = 0;
                     }
-                    if (totalH + tempH > PAGE_HEIGHT - headH)//超过一页
+                    if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
                     {
                         if (row.Cells.Count <= 0)//当前行为空则结束循环
                         {
@@ -331,19 +354,94 @@ namespace nsLims_NPOI
             }
         }
 
-       
+        /// <summary>
+        /// 按照标记找到range单元格名,如"&[test1]"所在单元格为H2,则返回"H2"
+        /// </summary>
+        /// <param name="filePath">Excel文件路径</param>
+        /// <param name="sheetIndex">sheet索引</param>
+        /// <param name="imgFlag">标记字符串</param>
+        /// <returns>例如"H2"</returns>
+        public string getExcelRangeByFlag(string filePath, int sheetIndex, string imgFlag)
+        {
+            System.Drawing.Point p = selectPosition(loadExcelSheetI(filePath, sheetIndex), imgFlag);
+            if (p.X < 0 || p.Y < 0)
+            {
+                WriteLog("classLims_NPOI.getExcelRangeByFlag 方法下标记字符串未找到\n", "");
+                return "";
+            }
+            var tempCol = classLims_NPOI.NumberToSystem26(p.Y + 1);
+            string rangeName = tempCol + (p.X + 1).ToString();
+            return rangeName;
+        }
+
+        /// <summary>
+        /// 返回sheet总页数
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <returns>sheet总页数</returns>
+        private int getSheetPageCount(ISheet sheet)
+        {
+            try
+            {
+                int startHead = getRepeatingRowsRange(sheet)[0];
+                int endHead = getRepeatingRowsRange(sheet)[1];
+                int fRow = endHead + 1;
+                int lRow = sheet.LastRowNum;
+                double totalH = 0; //总行高
+                int pageCount = 0; //页码计数
+                double headH = 0; //表头高度
+                headH = (sheet.GetMargin(MarginType.TopMargin) + sheet.GetMargin(MarginType.BottomMargin)) / 0.39370078740157483;
+                headH = headH * CM_POUND * 20;
+                for (int i = startHead; i <= endHead; i++)
+                {
+                    headH += sheet.GetRow(i).Height;
+                }
+
+                for (int i = fRow; i <= lRow; i++)
+                {
+                    IRow row = sheet.GetRow(i);
+                    double tempH = row.Height;
+                    if (row.ZeroHeight == true)
+                    {
+                        tempH = 0;
+                    }
+                    //System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (pageCount * headH))
+                    if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
+                    {
+                        if (row.Cells.Count <= 0)//当前行为空则结束循环
+                        {
+                            break;
+                        }
+                        pageCount++;
+                        totalH = tempH;
+                    }
+                    else
+                    {
+                        totalH += tempH;
+                    }
+
+                }
+                return pageCount + 1;
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return 0;
+            }
+        }
+
         /// <summary>
         /// 获取表格总页数,指定sheet要计算表头
         /// </summary>
         /// <param name="filePath">目标表格路径</param>
         /// <param name="sheetIndex">要计算表头的单sheet索引</param>
-        /// <param name="startHead">要计算表头的单sheet起始行号</param>
-        /// <param name="endHead">要计算表头的单sheet结束行号</param>
         /// <returns>总页数</returns>
-        public int getExcelPageCount(string filePath, int sheetIndex, int startHead, int endHead)
+        public int getExcelPageCount(string filePath, int sheetIndex)
         {
             try
             {
+                
+                classExcelMthd.excelRefresh(filePath);
                 int pages = 0;
                 IWorkbook wb = loadExcelWorkbookI(filePath);
                 for (int i = 0; i < wb.NumberOfSheets; i++)
@@ -354,16 +452,17 @@ namespace nsLims_NPOI
                     }
                     if (i == sheetIndex)
                     {
-                        pages += getSheetPageCount(filePath, sheetIndex, startHead, endHead);
+                        pages += getSheetPageCount(wb.GetSheetAt(i));
                     }
                     else
                     {
                         //传入起始表头行号和小于它的结束表头行号,代表无表头
-                        pages += getSheetPageCount(filePath, sheetIndex, 2, 1);
+                        pages += getSheetPageCount(wb.GetSheetAt(i), 2, 1);
                     }
                 }
                 return pages;
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 WriteLog(ex, "");
                 return 0;
@@ -406,64 +505,117 @@ namespace nsLims_NPOI
                     continue;
                 }
                 //sheet.PrintSetup.PageStart = (short)startPageNum;
-                sheet.Header.Right = "\n&10共 " + totalPages.ToString() + " 页 第 &P"+ startPage + " 页";
+                sheet.Header.Right = "\n&10共 " + totalPages.ToString() + " 页 第 &P" + startPage + " 页";
             }
             return wb;
         }
 
-        
-        /// <summary>
-        /// 拉伸表格到A4大小
-        /// </summary>
-        /// <param name="filePath">excel路径</param>
-        /// <param name="sheetIndex"></param>
-        /// <param name="startHeadRow">表头起始行号</param>
-        /// <param name="endHeadRow">表头结束行号</param>
-        /// <param name="startCol">起始列号</param>
-        /// <param name="endCol">结束列号</param>
-        /// <returns>是否成功</returns>
-        public bool stretchLastRowHeight(string filePath, int sheetIndex, int startHeadRow, int endHeadRow, int startCol, int endCol)
+        //判断行是否为新页的第一行,注意第一页的第一行判定为false
+        private bool IsNewPageRow(ISheet sheet, int rowIndex)
         {
+
             try
             {
-                //NPOI自动换行后行高读取值不变,需要用COM组件重新保存
-                FileConvertClass.excelRefresh(filePath);
-                IWorkbook wb = loadExcelWorkbookI(filePath);
-                ISheet sheet = wb.GetSheetAt(sheetIndex);
-                int pc = stretchLastRowHeight(sheet, startHeadRow, endHeadRow, startCol, endCol);
-                saveExcelWithoutAsk(filePath, wb);
-                return true;
-            }
-            catch(Exception ex) 
-            {
+                int startHeadRow, endHeadRow, startCol, endCol;
+                int[] iRange = getRepeatingRowsRange(sheet);
+                if (iRange == null)
+                {
+                    startHeadRow = 0;
+                    endHeadRow = -1;
+                    startCol = 0;
+                    endCol = getColumnRange(sheet)[1];
+                }
+                else
+                {
+                    startHeadRow = iRange[0];
+                    endHeadRow = iRange[1];
+                    startCol = iRange[2];
+                    endCol = iRange[3];
+                }
+                int fRow = endHeadRow + 1;
+                int lRow = rowIndex;
+
+                double totalH = 0; //总行高
+                                   //高度换算 1厘米＝27.682个单位, 1个单位在NPOI中是20个单位
+                double headH = 0; //表头高度                
+                headH = (sheet.GetMargin(MarginType.TopMargin) + sheet.GetMargin(MarginType.BottomMargin)) / 0.39370078740157483;
+                headH = headH * CM_POUND * 20;
+                for (int i = startHeadRow; i <= endHeadRow; i++)
+                {
+                    if (sheet.GetRow(i).ZeroHeight == true)
+                    {
+                        headH += 0;
+                    }
+                    else
+                    {
+                        headH += sheet.GetRow(i).Height;
+                    }
+                }
+                for (int i = fRow; i <= lRow; i++)
+                {
+                    IRow row = sheet.GetRow(i);
+                    if (row == null) continue;
+
+                    double tempH;
+                    if (row.ZeroHeight == true)
+                    {
+                        tempH = 0;
+                    }
+                    else
+                    {
+                        tempH = row.Height;
+                    }
+
+                    if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
+                    {
+                        if (i == rowIndex)
+                            return true;
+                        else
+                            totalH = tempH;
+                    }
+                    else
+                    {
+                        totalH = totalH + tempH;
+                    }
+                }
+                return false;
+            }catch(Exception ex) {
                 WriteLog(ex, "");
                 return false;
             }
+
         }
 
-       
-        /// <summary>
-        /// 拉伸最后一行,使占满A4纸,并返回总页数
-        /// </summary>
-        /// <param name="sheet"></param>
-        /// <param name="startHeadRow">表头起始行号</param>
-        /// <param name="endHeadRow">表头结束行号</param>
-        /// <param name="startCol">起始列号</param>
-        /// <param name="endCol">结束列号</param>
-        /// <returns>总页数</returns>
-        public int stretchLastRowHeight(ISheet sheet, int startHeadRow, int endHeadRow, int startCol, int endCol)
+        //获取sheet每一页的第一行索引,第一页除外
+        private List<int> getNewPageFirstRow(ISheet sheet)
         {
+            List<int> arrayFr = new List<int>();
             try
-            {
-                int fRow = endHeadRow+1;
+            {               
+                int startHeadRow, endHeadRow, startCol, endCol;
+                int[] iRange = getRepeatingRowsRange(sheet);
+                if (iRange == null)
+                {
+                    startHeadRow = 0;
+                    endHeadRow = -1;
+                    startCol = 0;
+                    endCol = getColumnRange(sheet)[1];
+                }
+                else
+                {
+                    startHeadRow = iRange[0];
+                    endHeadRow = iRange[1];
+                    startCol = iRange[2];
+                    endCol = iRange[3];
+                }
+                int fRow = endHeadRow + 1;
                 int lRow = sheet.LastRowNum;
-                
+
                 double totalH = 0; //总行高
-                int pageCount = 1; //页码计数
-                //高度换算 1厘米＝27.682个单位, 1个单位在NPOI中是20个单位
+                                   //高度换算 1厘米＝27.682个单位, 1个单位在NPOI中是20个单位
                 double headH = 0; //表头高度                
-                headH = (sheet.GetMargin(MarginType.TopMargin) + sheet.GetMargin(MarginType.BottomMargin))/ 0.39370078740157483;
-                headH = headH * 27.682*20;
+                headH = (sheet.GetMargin(MarginType.TopMargin) + sheet.GetMargin(MarginType.BottomMargin)) / 0.39370078740157483;
+                headH = headH * CM_POUND * 20;
                 for (int i = startHeadRow; i <= endHeadRow; i++)
                 {
                     if (sheet.GetRow(i).ZeroHeight == true)
@@ -487,16 +639,151 @@ namespace nsLims_NPOI
                         tempH = 0;
                     }
                     else
-                    {                        
+                    {
                         tempH = row.Height;
                     }
-                     
-                    if (totalH + tempH > PAGE_HEIGHT - (pageCount*headH))//超过一页
+
+                    if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
+                    {
+                        arrayFr.Add(i);
+                        totalH = tempH;
+                    }
+                    else
+                    {
+                        totalH = totalH + tempH;
+                    }
+                }
+                return arrayFr;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex,"");
+                return arrayFr;
+            }
+
+        }
+
+        /// <summary>
+        /// 拉伸表格到A4大小
+        /// </summary>
+        /// <param name="filePath">excel路径</param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="startHeadRow">表头起始行号</param>
+        /// <param name="endHeadRow">表头结束行号</param>
+        /// <param name="startCol">起始列号</param>
+        /// <param name="endCol">结束列号</param>
+        /// <returns>是否成功</returns>
+        public bool stretchLastRowHeight(string filePath, int sheetIndex, int startHeadRow, int endHeadRow, int startCol, int endCol)
+        {
+            try
+            {
+                //NPOI自动换行后行高度取值不变,需要用COM组件重新保存
+                classExcelMthd.excelRefresh(filePath);
+                IWorkbook wb = loadExcelWorkbookI(filePath);
+                ISheet sheet = wb.GetSheetAt(sheetIndex);
+                int pc = stretchLastRowHeight(sheet, startHeadRow, endHeadRow, startCol, endCol);
+                saveExcelWithoutAsk(filePath, wb);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 拉伸表格到A4大小
+        /// </summary>
+        /// <param name="filePath">excel路径</param>
+        /// <param name="sheetIndex"></param>
+        /// <returns>是否成功</returns>
+        public bool stretchLastRowHeight(string filePath, int sheetIndex)
+        {
+            try
+            {
+                //NPOI自动换行后行高度取值不变,需要用COM组件重新保存
+                classExcelMthd.excelRefresh(filePath);
+                IWorkbook wb = loadExcelWorkbookI(filePath);
+                ISheet sheet = wb.GetSheetAt(sheetIndex);
+
+                //拉伸末行
+                //先获取表头配置
+                int[] iRange = getRepeatingRowsRange(sheet);
+                if (iRange == null)
+                {
+                    stretchLastRowHeight(sheet, 0, -1, 0, getColumnRange(sheet)[1]);
+                }
+                else
+                {
+                    stretchLastRowHeight(sheet, iRange[0], iRange[1], iRange[2], iRange[3]);
+                }
+
+                saveExcelWithoutAsk(filePath, wb);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 拉伸最后一行,使占满A4纸,并返回总页数
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <param name="startHeadRow">表头起始行号</param>
+        /// <param name="endHeadRow">表头结束行号</param>
+        /// <param name="startCol">起始列号</param>
+        /// <param name="endCol">结束列号</param>
+        /// <returns>总页数</returns>
+        public int stretchLastRowHeight(ISheet sheet, int startHeadRow, int endHeadRow, int startCol, int endCol)
+        {
+            try
+            {
+                sheet.FitToPage = false;
+                int fRow = endHeadRow + 1;
+                int lRow = sheet.LastRowNum;
+
+                double totalH = 0; //总行高
+                int pageCount = 1; //页码计数
+                //高度换算 1厘米＝28.35个单位, 1个单位在NPOI中是20个单位
+                double headH = 0; //表头高度                
+                headH = (sheet.GetMargin(MarginType.TopMargin) + sheet.GetMargin(MarginType.BottomMargin)) / 0.39370078740157483;
+                headH = headH * CM_POUND * 20;
+                for (int i = startHeadRow; i <= endHeadRow; i++)
+                {
+                    if (sheet.GetRow(i).ZeroHeight == true)
+                    {
+                        headH += 0;
+                    }
+                    else
+                    {
+                        headH += sheet.GetRow(i).Height;
+                    }
+                }
+
+                for (int i = fRow; i <= lRow; i++)
+                {
+                    IRow row = sheet.GetRow(i);
+                    if (row == null) continue;
+
+                    double tempH;
+                    if (row.ZeroHeight == true)
+                    {
+                        tempH = 0;
+                    }
+                    else
+                    {
+                        tempH = row.Height;
+                    }
+                    if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
                     {
                         pageCount++;
                         if (i == lRow)//已经最后一行
                         {
-                            short shH = (short)(PAGE_HEIGHT - totalH - (1* headH));
+                            short shH = (short)(PAGE_HEIGHT - totalH - (1 * headH));
                             if (shH > 409 * 20)//最高只能设置一行为409
                             {
                                 //sheet.ShiftRows(i + 1,                                 //--开始行
@@ -521,19 +808,33 @@ namespace nsLims_NPOI
 
                                 }
                                 row.Height = 409 * 20;
-                                //测试中应该是106*20
+
                                 sheet.GetRow(i + 1).Height = (short)(shH - 409 * 20);
                                 //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
                                 sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
+                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+                                sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
+                                //最后一行始终居中靠上
+                                sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+                                sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
                             }
                             else
                             {
                                 row.Height = shH;
+                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+                                sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i, startCol, endCol));
+                                //最后一行始终居中靠上
+                                sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+                                sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
                             }
                             return pageCount;
                         }
                         else
                         {
+                            if (IsNewPageRow(sheet, i))
+                            {
+                                sheet.SetRowBreak(i - 1);
+                            }
                             totalH = tempH;
                             continue;
                         }
@@ -542,7 +843,7 @@ namespace nsLims_NPOI
                     {
                         if (i == lRow)//已经最后一行
                         {
-                            short shH = (short)(PAGE_HEIGHT - totalH - (1* headH));
+                            short shH = (short)(PAGE_HEIGHT - totalH - (1 * headH));
                             if (shH > 409 * 20)//最高只能设置一行为409
                             {
                                 //sheet.ShiftRows(i + 1,                                 //--开始行
@@ -571,10 +872,18 @@ namespace nsLims_NPOI
                                 sheet.GetRow(i + 1).Height = (short)(shH - 409 * 20);
                                 //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
                                 sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
+                                //最后一行始终居中靠上
+                                sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+                                sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
                             }
                             else
                             {
                                 row.Height = shH;
+                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+                                sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i, startCol, endCol));
+                                //最后一行始终居中靠上
+                                sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+                                sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
                             }
                             return pageCount;
                         }
@@ -594,7 +903,80 @@ namespace nsLims_NPOI
             }
         }
 
-        
+        public void dealMergedAreaInPages(string filePath, int sheetIndex)
+        {
+            IWorkbook wb = loadExcelWorkbookI(filePath);
+            dealMergedAreaInPages(wb.GetSheetAt(sheetIndex));
+            saveExcelWithoutAsk("D:\\TEST001.xls", wb);
+        }
+
+        //为了防止合并后的列跨页,需要更改新一页的数据,在末尾加空格
+        private ISheet dealMergedAreaInPages(ISheet sheet)
+        {
+            //sheet.FitToPage = false;
+            try
+            {                
+                //获取每页第一行的索引
+                List<int> firstPageRowIndex = getNewPageFirstRow(sheet);
+                foreach (int i in firstPageRowIndex)
+                {
+                    IRow row = sheet.GetRow(i);
+                    if (row == null) continue;
+
+                    int testNoIndex = selectPosition(sheet, "检测项目").Y;
+                    //取上一行检测项目值
+                    string testNo = getCellStringValueAllCase(sheet.GetRow(i - 1).GetCell(testNoIndex));
+                    int diffRowNum = i - 1;//新一页的相同检测项目所在行的范围,如果计算结果为i-1则代表不同,不用处理
+                    //计算diffRowNum
+                    for (int n = i; n < sheet.LastRowNum; n++)
+                    {
+                        //如果检测项目相等,则加一
+                        IRow nRow = sheet.GetRow(n);
+                        if (nRow == null) return sheet;
+                        ICell cell = nRow.GetCell(testNoIndex);
+                        if (cell == null) return sheet;
+                        if (testNo.Equals(getCellStringValueAllCase(cell)))
+                        {
+                            diffRowNum = n;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    //更改单元格数值,末尾添加空格
+                    for (int k = i; k <= diffRowNum; k++)
+                    {
+                        IRow tempRow = sheet.GetRow(k);
+                        if (tempRow == null)
+                        {
+                            break;
+                        }
+                        for (int j = 0; j < tempRow.LastCellNum; j++)
+                        {
+                            ICell cell = tempRow.GetCell(j);
+                            if (cell == null)
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                cell.SetCellValue(getCellStringValueAllCase(cell) + " ");
+
+                            }
+                        }
+                    }
+
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+            }
+            return sheet;
+        }
+
         /// <summary>
         /// 遍历求标记字符串个数
         /// </summary>
@@ -618,7 +1000,7 @@ namespace nsLims_NPOI
                     {
                         continue;
                     }
-                    for (int j = row.FirstCellNum; j <= row.LastCellNum; j++)
+                    for (int j = row.FirstCellNum; j < row.LastCellNum; j++)
                     {
                         ICell cell = (ICell)row.GetCell(j);
                         if (cell == null)
@@ -653,7 +1035,7 @@ namespace nsLims_NPOI
         /// <param name="imgPath">图片路径数组</param>
         /// <param name="endFlag">结束标记</param>
         /// <returns>新工作簿</returns>
-        public IWorkbook reportImagesExcel(IWorkbook wb, int sheetIndex, 
+        public IWorkbook reportImagesExcel(IWorkbook wb, int sheetIndex,
             string reportno, object[] ordno, object[] testcode, object[] imgDscp, object[] imgPath, string endFlag)
         {
             try
@@ -663,7 +1045,7 @@ namespace nsLims_NPOI
                 string[] testcodeList = dArray2String1(testcode);//检测项
                 string[] imgDscpList = dArray2String1(imgDscp);//图片描述
                 string[] imgPathList = dArray2String1(imgPath);//图片路径
-                if(wb.NumberOfSheets<sheetIndex+1)
+                if (wb.NumberOfSheets < sheetIndex + 1)
                 {
                     return wb;
                 }
@@ -674,8 +1056,9 @@ namespace nsLims_NPOI
                     return wb;
                 }
                 //将数据页的结束标记置为空
-                else {
-                    wb = replaceCellValue(wb, sheetIndex-1, "", endFlag);
+                else
+                {
+                    wb = replaceCellValue(wb, sheetIndex - 1, "", endFlag);
                 }
 
                 //如果使用2图片模板,奇数图片数组最后一个追加一个""空
@@ -690,14 +1073,14 @@ namespace nsLims_NPOI
                 for (int i = sheetIndex + 1; i <= (imgPathList.Length - tempCount) / tempCount + sheetIndex; i++)
                 {
                     addNewSheet(wb, i, "Sheet" + (i + 1).ToString());
-                    CopySheet(wb, fromSheet, wb.GetSheetAt(i), true);                   
+                    CopySheet(wb, fromSheet, wb.GetSheetAt(i), true);
                 }
 
                 //清除结束标记所在单元格的上边框
                 for (int i = sheetIndex; i < (imgPathList.Length - tempCount) / tempCount + sheetIndex; i++)
                 {
                     wb = setTopLineNull(wb, i, endFlag);
-                    
+
                 }
 
                 //清理结束标记所在单元格的值
@@ -723,7 +1106,7 @@ namespace nsLims_NPOI
                     else if (tempCount == 2)
                     {
                         //如果是奇数数组的最后一页,则静态数据部分只写第一张图片,第二张图片的路径为""
-                        if (ordnoList.Length % 2 == 1 && ordnoList.Length <= i*2+1 )
+                        if (ordnoList.Length % 2 == 1 && ordnoList.Length <= i * 2 + 1)
                         {
                             object[] dReportno = { "&[任务编号]", reportnoList[0] };
                             object[] dOrdno1 = { "&[子样1]", ordnoList[i * 2] };
@@ -733,7 +1116,7 @@ namespace nsLims_NPOI
                             addImgTo2ImgWorkbook(wb, i + sheetIndex, imgPathList[i * 2], imgPathList[i * 2 + 1],
                                 "&[图片1]", "&[图片2]", endFlag, dArray);
                         }
-                        else 
+                        else
                         {
                             object[] dReportno = { "&[任务编号]", reportnoList[0] };
                             object[] dOrdno1 = { "&[子样1]", ordnoList[i * 2] };
@@ -751,7 +1134,8 @@ namespace nsLims_NPOI
                 }
 
                 return wb;
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 WriteLog(ex, "");
                 return wb;
@@ -759,7 +1143,7 @@ namespace nsLims_NPOI
 
         }
 
-        
+
         /// <summary>
         /// 写入多个图片到模板
         /// </summary>
@@ -816,13 +1200,13 @@ namespace nsLims_NPOI
             style.TopBorderColor = HSSFColor.White.Index;//顶部边框为默认
             style.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;//水平居中
             style.VerticalAlignment = NPOI.SS.UserModel.VerticalAlignment.Center;//垂直居中
-            style.SetFont(CellUtil.GetRow(region[1,0], sheet).GetCell(region[1,1]).CellStyle.GetFont(workbook));
+            style.SetFont(CellUtil.GetRow(region[1, 0], sheet).GetCell(region[1, 1]).CellStyle.GetFont(workbook));
             #endregion
 
-            for (int i = region[0,0]; i <= region[1,0]; i++)
+            for (int i = region[0, 0]; i <= region[1, 0]; i++)
             {
                 IRow row = CellUtil.GetRow(i, sheet);
-                for (int j = region[0,1]; j <= region[1,1]; j++)
+                for (int j = region[0, 1]; j <= region[1, 1]; j++)
                 {
                     ICell singleCell = HSSFCellUtil.GetCell(row, (short)j);
                     singleCell.CellStyle = style;
@@ -1054,8 +1438,8 @@ namespace nsLims_NPOI
         /// <param name="imgFlag2">图片2标记</param>
         /// <param name="endRowFlag">结束行标记</param>
         /// <param name="dArray">静态数据</param>
-        public void addImgTo2ImgWorkbook(string filePath, int sheetIndex, 
-            string imagePath1, string imagePath2, string imgFlag1, string imgFlag2, string endRowFlag, object[]dArray)
+        public void addImgTo2ImgWorkbook(string filePath, int sheetIndex,
+            string imagePath1, string imagePath2, string imgFlag1, string imgFlag2, string endRowFlag, object[] dArray)
         {
             try
             {
@@ -1076,7 +1460,7 @@ namespace nsLims_NPOI
                 {
                     //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
                     //sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(36, 39, 0, 7));
-                    NPOI.SS.Util.CellRangeAddress region = new NPOI.SS.Util.CellRangeAddress(selectPosition(sheet, imgFlag2).X-1, selectPosition(sheet, endRowFlag).X,
+                    NPOI.SS.Util.CellRangeAddress region = new NPOI.SS.Util.CellRangeAddress(selectPosition(sheet, imgFlag2).X - 1, selectPosition(sheet, endRowFlag).X,
                         selectPosition(sheet, endRowFlag).Y, getCellMergeArea(sheet, endRowFlag)[1, 1]);
                     sheet.AddMergedRegion(region);
 
@@ -1113,7 +1497,7 @@ namespace nsLims_NPOI
             }
             catch (Exception ex)
             {
-                WriteLog(ex,"");
+                WriteLog(ex, "");
             }
 
         }
@@ -1212,7 +1596,7 @@ namespace nsLims_NPOI
                 //添加第一张图片
                 Point p = selectPosition(sheet, imgFlag1);
                 workbook = addImageToSheet(workbook, sheetIndex, imagePath1, p.X, p.Y);
-                
+
                 workbook = fillDataToExcelByValue(workbook, sheetIndex, dArray2Dictionary(dArray));
                 saveExcelWithoutAsk(filePath, workbook);
             }
@@ -1251,9 +1635,39 @@ namespace nsLims_NPOI
 
         }
 
-
         /// <summary>
         /// 添加图片到指定excel,图片指定大小
+        /// </summary>
+        /// <param name="workbookPath">源工作簿路径</param>
+        /// <param name="sheetIndex">工作表sheet索引</param>
+        /// <param name="toPath">excel保存路径</param>
+        /// <param name="imagePath">图片文件路径</param>
+        /// <param name="imgFlag">图片文件路径</param>
+        /// <returns></returns>
+        public void addImage2Excel(string workbookPath, int sheetIndex, string toPath, string imagePath, string imgFlag)
+        {
+            try
+            {
+                IWorkbook workbook = loadExcelWorkbookI(workbookPath);
+                string sheetName = workbook.GetSheetName(sheetIndex);
+                int row1 = selectPosition(workbook.GetSheetAt(sheetIndex), imgFlag).X;
+                int col1 = selectPosition(workbook.GetSheetAt(sheetIndex), imgFlag).Y;
+                if (row1 < 0 || col1 < 0)
+                {
+                    return;
+                }
+                addImage2Excel(workbook, sheetName, imagePath, col1, row1);
+                saveExcelWithoutAsk(toPath, workbook);
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+            }
+
+        }
+
+        /// <summary>
+        /// 添加图片到指定excel,图片不指定大小
         /// </summary>
         /// <param name="workbook">源工作簿</param>
         /// <param name="sheetIndex">工作表sheet索引</param>
@@ -1261,15 +1675,15 @@ namespace nsLims_NPOI
         /// <param name="col1">列号</param>
         /// <param name="row1">行号</param>
         /// <returns>目标工作簿</returns>
-        public HSSFWorkbook addImage2Excel(HSSFWorkbook workbook, int sheetIndex, string imagePath, int col1, int row1 )
+        private IWorkbook addImage2Excel(IWorkbook workbook, int sheetIndex, string imagePath, int col1, int row1)
         {
             string sheetName = workbook.GetSheetName(sheetIndex);
-            return addImage2Excel( workbook, sheetName, imagePath, col1, row1 );
+            return addImage2Excel(workbook, sheetName, imagePath, col1, row1);
 
         }
 
         /// <summary>
-        /// 添加图片到指定excel,图片指定大小
+        /// 添加图片到指定excel,图片不指定大小
         /// </summary>
         /// <param name="workbook">源工作簿</param>
         /// <param name="sheetName">工作表名</param>
@@ -1277,36 +1691,18 @@ namespace nsLims_NPOI
         /// <param name="col1">列号</param>
         /// <param name="row1">行号</param>
         /// <returns>目标工作簿</returns>
-        public HSSFWorkbook addImage2Excel(HSSFWorkbook workbook, string sheetName, string imagePath, int col1, int row1)
+        private IWorkbook addImage2Excel(IWorkbook workbook, string sheetName, string imagePath, int col1, int row1)
         {
             try
             {
-                #region
-                ////add picture data to this workbook.
-                //string imagePath = "";
-                //OpenFileDialog openDialog = new OpenFileDialog();
-                //openDialog.DefaultExt = "jpg";
-                //openDialog.Filter = "图片文件|*.jpg";
-                //MemoryStream ms = new MemoryStream();
-                //if (openDialog.ShowDialog() == DialogResult.OK)
-                //{
-                //    imagePath = openDialog.FileName;
-                //}
-                //else
-                //{
-                //    return;
-                //}
 
-                //imagePath = saveResizedPhoto(PhotoSizeChange(imagePath, width, height), "D:\\test.jpg");
-                #endregion
-
-                
                 byte[] bytes = System.IO.File.ReadAllBytes(imagePath);
-                int pictureIdx = workbook.AddPicture(bytes, PictureType.JPEG);
+                int pictureIdx = workbook.AddPicture(bytes, PictureType.PNG);
 
                 // Create the drawing patriarch.  This is the top level container for all shapes.
-                HSSFSheet sheet = (HSSFSheet)workbook.GetSheet(sheetName);
-                HSSFPatriarch patriarch = (HSSFPatriarch)sheet.CreateDrawingPatriarch();
+                ISheet sheet = workbook.GetSheet(sheetName);
+                //HSSFPatriarch patriarch = (HSSFPatriarch)sheet.CreateDrawingPatriarch();
+                IDrawing patri = sheet.CreateDrawingPatriarch();
 
                 //add a picture
                 /*
@@ -1320,11 +1716,20 @@ namespace nsLims_NPOI
                  * col2：终止单元格列序号，从0开始计算；
                  * row2：终止单元格行序号，从0开始计算；
                  */
-                HSSFClientAnchor anchor = new HSSFClientAnchor(0, 0, 0, 0, col1, row1, col1+1, row1+1);
-                HSSFPicture pict = (HSSFPicture)patriarch.CreatePicture(anchor, pictureIdx);
+                IClientAnchor anchor = null;
+                if (sheet is HSSFSheet)
+                {
+                    anchor = new HSSFClientAnchor(0, 0, 0, 0, col1, row1, col1, row1);
+                }
+                else if (sheet is XSSFSheet)
+                {
+                    anchor = new XSSFClientAnchor(0, 0, 0, 0, col1, row1, col1, row1);
+                }
+                //IPicture pict = patriarch.CreatePicture(anchor, pictureIdx);
+                IPicture pict = patri.CreatePicture(anchor, pictureIdx);
 
                 //Resize(double scaleX, double scaleY),2个参数代表宽高缩放百分比
-                //pict.Resize();//图片大小不拉伸
+                pict.Resize();//图片大小拉伸
                 return workbook;
             }
             catch (Exception ex)
@@ -1340,33 +1745,146 @@ namespace nsLims_NPOI
         /// <param name="photo">要保存的图片</param>
         /// <param name="strPhoto">保存路径</param>
         /// <returns>保存路径</returns>
-        private string saveResizedPhoto(System.Drawing.Image photo, string strPhoto)
+        private string savePhoto(System.Drawing.Image photo, string strPhoto)
         {
             System.IO.FileStream ms = new System.IO.FileStream(strPhoto, FileMode.Create);
-            photo.Save(ms, System.Drawing.Imaging.ImageFormat.Jpeg);
+            photo.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
             ms.Close();
             return strPhoto;
         }
 
         /// <summary>
-        /// 处理图片大小到指定尺寸，返回值为一个Image对象，使用Image对象的Save方法就可以保存该图片
+        /// 处理图片大小到指定尺寸，返回值为一个新图片文件路径，使用Image对象的Save方法就可以保存Image对象
         /// </summary>
-        /// <param name="strPhoto">保存路径</param>
+        /// <param name="fromPhoto">图片载入路径</param>
+        /// <param name="toPhoto">图片保存路径</param>
         /// <param name="width">图片宽度,像素</param>
         /// <param name="height">图片高度,像素</param>
-        /// <returns>图片对象</returns>
-        private System.Drawing.Image PhotoSizeChange(string strPhoto, int width, int height)
+        /// <returns>图片文件</returns>
+        public string PhotoSizeChange(string fromPhoto, string toPhoto, int width, int height)
         {
-            //strPhoto是原来的图片文件所在的物理路径
-            //处理图片功能
-            System.Drawing.Image image = new Bitmap(strPhoto);//得到原图
-            //创建指定大小的图
-            System.Drawing.Image newImage = image.GetThumbnailImage(width, height, null, new IntPtr());
-            Graphics g = Graphics.FromImage(newImage);
-            //将原图画到指定的图上
-            g.DrawImage(newImage, 0, 0, newImage.Width, newImage.Height);
-            g.Dispose();
-            return newImage;
+            try
+            {
+                //fromPhoto是原来的图片文件所在的物理路径
+                //处理图片功能
+                System.Drawing.Image image = new Bitmap(fromPhoto);//得到原图
+                                                                   //创建指定大小的图
+                System.Drawing.Image newImage = image.GetThumbnailImage(width, height, null, new IntPtr());
+                Graphics g = Graphics.FromImage(newImage);
+                //将原图画到指定的图上
+                g.DrawImage(newImage, 0, 0, newImage.Width, newImage.Height);
+                g.Dispose();
+                image.Dispose();
+
+                //新图片保存
+                System.IO.FileStream ms = new System.IO.FileStream(toPhoto, FileMode.Create);
+                newImage.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+                ms.Close();
+                return toPhoto;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return fromPhoto;
+            }
+        }
+
+        //锁定整个excel,开放指定单元格
+        public void protectExcel(string filePath, int sheetIndex, string[] flags, string psw)
+        {
+            try
+            {
+                IWorkbook wb = loadExcelWorkbookI(filePath);
+                //首先解锁指定单元格
+                protectCells(wb.GetSheetAt(sheetIndex), flags);
+                //然后锁定所有sheets
+                protectSheets(wb, psw);
+                saveExcelWithoutAsk(filePath, wb);
+                //最后锁定整个workbook
+                new classExcelMthd().protectWorkBook(filePath, psw);
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+            }
+        }
+
+        private void protectSheets(IWorkbook wb, string psw)
+        {
+            try {
+                for (int i=0; i<wb.NumberOfSheets; i++) {
+                    ISheet sheet = wb.GetSheetAt(i);
+                    if (sheet == null) continue;
+                    sheet.ProtectSheet(psw);
+                }
+            }
+            catch(Exception ex)
+            {
+                WriteLog(ex, "");
+                return;
+            }
+        }
+
+        //按照标记字符串查找Cell并设置Cell不锁定
+        private void protectCells(ISheet sheet, string[] flags) {
+
+            try
+            {
+                //首先锁定所有单元格
+                for (int i = 0; i < sheet.LastRowNum; i++)
+                {
+                    IRow row = sheet.GetRow(i);
+                    if (row == null) continue;
+                    if (row.RowStyle != null)
+                    {
+                        row.RowStyle.IsLocked = true;
+                    }
+                    for (int j = 0; j < row.LastCellNum; j++)
+                    {
+                        ICell cell = row.GetCell(j);
+                        if (cell == null) continue;
+                        cell.CellStyle.IsLocked = true;
+                    }
+                }
+
+                List<Point> arrP = new List<Point>();
+                for (int i = 0; i < flags.Length; i++)
+                {
+                    arrP.Add(selectPosition(sheet, flags[i]));
+                }
+                for (int i = 0; i < arrP.Count; i++)
+                {
+                    ICell cell = sheet.GetRow(arrP[i].X).GetCell(arrP[i].Y);
+                    if (cell == null) continue;
+                    cell.CellStyle.IsLocked = false;
+                }
+            }catch(Exception ex)
+            {
+                WriteLog(ex, "");
+                return;
+            }
+        }
+
+        //标记被锁定的单元格背景色为红色
+        public void colorToLockedCell(string filePath)
+        {
+            ISheet sheet = loadExcelSheetI(filePath, 0);
+            //首先锁定所有单元格
+            for (int i = 0; i < sheet.LastRowNum; i++)
+            {
+                IRow row = sheet.GetRow(i);
+                if (row == null) continue;                
+                for (int j = 0; j < row.LastCellNum; j++)
+                {
+                    ICell cell = row.GetCell(j);
+                    if (cell == null) continue;
+                    if(cell.CellStyle==null) continue;
+                    if (cell.CellStyle.IsLocked == false)
+                    {
+                    }
+                }
+            }
+
         }
 
         /// <summary>
@@ -1374,11 +1892,11 @@ namespace nsLims_NPOI
         /// </summary>
         /// <param name="filePath">文件路径</param>
         /// <returns>Point对象[Width:宽,Height:高]</returns>
-        private Point getImageSize(string filePath)
+        protected Point getImageSize(string filePath)
         {
             Point p = new Point();
             FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
-            System.Drawing.Image  tempimage = System.Drawing.Image.FromStream(fs, true);           
+            System.Drawing.Image tempimage = System.Drawing.Image.FromStream(fs, true);
             p.X = tempimage.Width;//宽
             p.Y = tempimage.Height;//高
             fs.Close();
@@ -1390,7 +1908,8 @@ namespace nsLims_NPOI
         /// </summary>
         /// <param name="filePath">文件路径</param>
         /// <returns>2个元素的数组,[0]:垂直分辨率,[1]:水平分辨率</returns>
-        private double[] getImageResolution(string filePath){
+        private double[] getImageResolution(string filePath)
+        {
 
             FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             System.Drawing.Image tempimage = System.Drawing.Image.FromStream(fs, true);
@@ -1408,7 +1927,7 @@ namespace nsLims_NPOI
         /// <param name="width">像素宽度</param>
         /// <param name="height">像素高度</param>
         /// <returns>是否合格</returns>
-        public Boolean isDimensionsMatch(string filePath,int width, int height)
+        private Boolean isDimensionsMatch(string filePath, int width, int height)
         {
             Point p = getImageSize(filePath);
             if (p.X == width && p.Y == height)
@@ -1461,7 +1980,7 @@ namespace nsLims_NPOI
                 file.Dispose();
                 return wb;
             }
-            catch 
+            catch
             {
                 try
                 {
@@ -1470,7 +1989,8 @@ namespace nsLims_NPOI
                     file.Close();
                     file.Dispose();
                     return wb;
-                }catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     WriteLog(ex, "");
                     return null;
@@ -1492,7 +2012,7 @@ namespace nsLims_NPOI
             return MyInsertRow(workbook, sheetName, InsertRowIndex, mySourceStyleRow);
         }
 
-        
+
         /// <summary>
         /// 在指定位置插入行
         /// </summary>
@@ -1568,7 +2088,7 @@ namespace nsLims_NPOI
             return workbook;
         }
 
-        
+
         /// <summary>
         /// 单元格值赋值
         /// </summary>
@@ -1626,13 +2146,17 @@ namespace nsLims_NPOI
                 if (row.LastCellNum > p[1])
                 {
                     p[1] = row.LastCellNum;
+                    if (row.GetCell(row.LastCellNum) == null)
+                    {
+                        p[1]--;
+                    }
                 }
             }
             p[0] = p[0] < 0 ? 0 : p[0];
             return p;
         }
 
-        
+
         #region 废弃使用"C12"作为单元格坐标
         ////填写数据到excel,根据单元格坐标
         ////Dictionary的key为坐标(如"C3"),value为值
@@ -1691,7 +2215,7 @@ namespace nsLims_NPOI
         /// <param name="targetExcelPath">目标工作簿文件路径</param>
         /// <param name="map">Dictionary数据对象</param>
         /// <param name="sheetIndex">工作表sheet索引</param>
-        public void fillDataToExcelByValue( string sourceExcelPath, string targetExcelPath, Dictionary<string, string> map, int sheetIndex )
+        public void fillDataToExcelByValue(string sourceExcelPath, string targetExcelPath, Dictionary<string, string> map, int sheetIndex)
         {
             string sheetName = loadExcelWorkbookI(sourceExcelPath).GetSheetName(sheetIndex);
             fillDataToExcelByValue(sourceExcelPath, targetExcelPath, map, sheetName);
@@ -1704,12 +2228,12 @@ namespace nsLims_NPOI
         /// <param name="targetExcelPath">目标工作簿文件路径</param>
         /// <param name="map">Dictionary数据对象</param>
         /// <param name="sheetName">工作表名</param>
-        public void fillDataToExcelByValue( string sourceExcelPath, string targetExcelPath, Dictionary<string, string> map, string sheetName )
+        public void fillDataToExcelByValue(string sourceExcelPath, string targetExcelPath, Dictionary<string, string> map, string sheetName)
         {
             try
             {
                 IWorkbook wb = loadExcelWorkbookI(sourceExcelPath);
-                ISheet sheet = wb.GetSheet(sheetName);//获取模板sheet
+                ISheet sheet = wb.GetSheet(sheetName);//获取模板sheet                
 
                 foreach (var oneMapPoint in map)
                 {
@@ -1717,6 +2241,7 @@ namespace nsLims_NPOI
                     string value = oneMapPoint.Value.ToString();
                     replaceCellValue(sheet, value, key);
                 }
+                sheet.ForceFormulaRecalculation = true;//计算Excel公式
                 saveExcelWithoutAsk(targetExcelPath, wb);
                 return;
             }
@@ -1789,7 +2314,7 @@ namespace nsLims_NPOI
             return wb;
 
         }
-        
+
         /// <summary>
         /// 创建新的sheet,如果目标索引存在,则此sheet重命名为目标sheet名,不存在则创建
         /// </summary>
@@ -1821,58 +2346,6 @@ namespace nsLims_NPOI
             }
 
         }
-
-        ////添加一个sheet
-        ///// <summary>
-        ///// 添加一个sheet到工作簿,默认Sheet名为Sheet1,下一个为Sheet2
-        ///// </summary>
-        ///// <param name="workbook">目标工作簿</param>
-        ///// <param name="wbPaths">源工作簿文件路径</param>
-        ///// <returns>合并后的工作簿</returns>
-        //public HSSFWorkbook addSheetsToWorkbook(HSSFWorkbook workbook, object[] wbPaths)
-        //{
-        //    try
-        //    {
-        //        for (int i = 0; i < wbPaths.Length; i++)
-        //        {
-        //            HSSFSheet sheet = loadExcelSheet((string)wbPaths[i], 0);
-        //            if (sheet == null)
-        //                return workbook;
-        //            addNewSheet(workbook, i + 1, "Sheet" + (i + 1), sheet);
-        //            CopySheet(workbook, sheet, workbook.GetSheetAt(i + 1), true);
-        //        }
-        //        return workbook;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        WriteLog(ex,"");
-        //        return workbook;
-        //    }
-        //}
-
-        ////合并多个workbook到指定Workbook
-        ///// <summary>
-        ///// 合并多个workbook到指定Workbook
-        ///// </summary>
-        ///// <param name="fromWorkbook">源工作簿路径</param>
-        ///// <param name="wbPaths">源工作簿文件路径</param>
-        ///// <param name="toWorkbook">目标工作簿路径</param>
-        ///// <returns>成功则犯规目标工作簿,失败则返回源工作簿</returns>
-        //public string addWorkbooks(string fromWorkbook, object[] wbPaths, string toWorkbook )
-        //{
-        //    try
-        //    {
-        //        HSSFWorkbook wb = loadExcelWorkbook(fromWorkbook);
-        //        wb = addSheetsToWorkbook(wb, wbPaths);
-        //        saveExcelWithoutAsk(toWorkbook, wb);
-        //        return toWorkbook;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        WriteLog(ex,"");
-        //        return fromWorkbook;
-        //    }
-        //}
 
         #region 网上的复制功能,参见:http://blog.csdn.net/wutbiao/article/details/8696446
 
@@ -1913,7 +2386,7 @@ namespace nsLims_NPOI
                 toStyle.SetFont(fromStyle.GetFont(wb));
                 return toStyle;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 //WriteLog(ex, "");
                 System.Console.WriteLine(ex.ToString());
@@ -1969,7 +2442,7 @@ namespace nsLims_NPOI
         public static void CopySheet(IWorkbook wb, ISheet fromSheet, ISheet toSheet, bool copyValueFlag)
         {
             //宽度
-            for (int i = getColumnRange(fromSheet)[0]; i < getColumnRange(fromSheet)[1]; i++)
+            for (int i = getColumnRange(fromSheet)[0]; i <= getColumnRange(fromSheet)[1]; i++)
             {
                 toSheet.SetColumnWidth(i, fromSheet.GetColumnWidth(i));
             }
@@ -2023,7 +2496,8 @@ namespace nsLims_NPOI
             {
                 CopySheet(wb, fromSheet, wb.GetSheetAt(sheetIndex), copyValueFlag);
                 return wb;
-            }catch(Exception ex)
+            }
+            catch (Exception ex)
             {
                 WriteLog(ex, "");
                 return wb;
@@ -2059,9 +2533,9 @@ namespace nsLims_NPOI
             //}
             //int firstCount = fromRow.FirstCellNum;
             int cellCount = fromRow.LastCellNum;
-            for (int i=0; i< cellCount; i++)
+            for (int i = 0; i < cellCount; i++)
             {
-                if(fromRow.GetCell(i) == null)
+                if (fromRow.GetCell(i) == null)
                 {
                     continue;
                 }
@@ -2075,7 +2549,7 @@ namespace nsLims_NPOI
 
             }
         }
-        
+
         /// <summary>
         /// 复制原有sheet的合并单元格到新创建的sheet
         /// </summary>
@@ -2093,7 +2567,7 @@ namespace nsLims_NPOI
                 toSheet.AddMergedRegion(fromSheet.GetMergedRegion(i));
             }
         }
-        
+
         /// <summary>
         /// 复制单元格
         /// </summary>
@@ -2389,7 +2863,7 @@ namespace nsLims_NPOI
                     string[] arrayTemp = new string[dArray.GetLength(1)];
                     for (int j = 0; j < dArray.GetLength(1); j++)
                     {
-                        arrayTemp[j] = dArray[i,j].ToString();
+                        arrayTemp[j] = dArray[i, j].ToString();
                     }
                     dic.Add(i, arrayTemp);
                 }
@@ -2695,17 +3169,14 @@ namespace nsLims_NPOI
             return;
         }
 
-        /// <summary>
-        /// 删除文件
-        /// </summary>
-        /// <param name="filePath">要删除的文件路径</param>
-        public static void deleteFile(string filePath)
+        public static void LockCell(IWorkbook wb, int sheetIndex, int rowNum, int colNum, bool isLock)
         {
-            if (File.Exists(filePath))
-            {
-                File.Delete(filePath);
-            }
-            return;
+            wb.GetSheetAt(sheetIndex).GetRow(rowNum).GetCell(colNum).CellStyle.IsLocked = isLock;
+        }
+
+        public static void LockSheet(IWorkbook wb, int sheetIndex, string password)
+        {
+            wb.GetSheetAt(sheetIndex).ProtectSheet(password);
         }
 
 
@@ -2716,7 +3187,7 @@ namespace nsLims_NPOI
         public static extern bool CloseHandle(IntPtr hObject);
         public const int OF_READWRITE = 2;
         public const int OF_SHARE_DENY_NONE = 0x40;
-        public readonly IntPtr HFILE_ERROR = new IntPtr(-1);      
+        public readonly IntPtr HFILE_ERROR = new IntPtr(-1);
 
         /// <summary>
         /// 检测文件被占用 
@@ -2833,7 +3304,7 @@ namespace nsLims_NPOI
         /// <param name="sheet">工作表名</param>
         /// <param name="value">标志字符串</param>
         /// <returns>Point对象,X:行号,Y:列号</returns>
-        public Point selectPosition(ISheet sheet, string value)
+        public static Point selectPosition(ISheet sheet, string value)
         {
             Point p = new Point();
             p.X = -1;
@@ -2849,7 +3320,7 @@ namespace nsLims_NPOI
                     {
                         continue;
                     }
-                    for (int j = row.FirstCellNum; j <= row.LastCellNum; j++)
+                    for (int j = row.FirstCellNum; j < row.LastCellNum; j++)
                     {
                         ICell cell = (ICell)row.GetCell(j);
                         if (cell == null)
@@ -2911,7 +3382,7 @@ namespace nsLims_NPOI
                         continue;
                     int minCol = row.FirstCellNum;
                     int maxCol = row.LastCellNum; ;
-                    for (int j = minCol; j <= maxCol; j++)
+                    for (int j = minCol; j < maxCol; j++)
                     {
                         ICell cell = sheet.GetRow(i).GetCell(j);
                         if (cell == null)
@@ -2934,7 +3405,7 @@ namespace nsLims_NPOI
                 return null;
             }
         }
-                
+
         /// <summary>
         /// 获取字符串数组在sheet中的列号
         /// </summary>
@@ -2977,7 +3448,7 @@ namespace nsLims_NPOI
             }
             catch (Exception ex)
             {
-                WriteLog(ex,"");
+                WriteLog(ex, "");
                 return array;
             }
         }
@@ -3052,7 +3523,7 @@ namespace nsLims_NPOI
         public IWorkbook replaceLastCellValue(IWorkbook workbook, string newString, string oldString)
         {
             //从后向前查找,替换第一个遇到的flag
-            for(int i= workbook.NumberOfSheets-1; i >= 0; i--)
+            for (int i = workbook.NumberOfSheets - 1; i >= 0; i--)
             {
                 ISheet sheet = workbook.GetSheetAt(i);
                 Point p = selectPosition(sheet, oldString);
@@ -3068,7 +3539,7 @@ namespace nsLims_NPOI
                     cellValue = cellValue.Replace(oldString, newString);
                     cell.SetCellValue(cellValue);
                     break;
-                }            
+                }
             }
             return workbook;
         }
@@ -3184,8 +3655,8 @@ namespace nsLims_NPOI
         //    }
         //}
 
-        
-            
+
+
         ///// <summary>
         ///// 导出一维报表(不扩展列,只扩展行)从表,数据为object[]格式
         ///// </summary>
@@ -3310,12 +3781,22 @@ namespace nsLims_NPOI
                 int row = selectPosition(sheet, cellPosiValue).X;//起始单元格行号
                 int col = selectPosition(sheet, cellPosiValue).Y; //起始单元格列号
 
-                for (int i = row; i < row + dic.Count; i++)
+                //先写入表头
+                string[] arrayTemp = dic[0];
+                for (int j = col; j < col + arrayTemp.Length; j++)
+                {
+                    ICell cell = sheet.GetRow(row).GetCell(j);
+                    if (cell == null)
+                        continue;
+                    cell.SetCellValue(arrayTemp[j - col]);
+                }
+
+                for (int i = row + 1; i < row + dic.Count; i++)
                 {
 
                     #region 扩充行,并设置格式为上一行
                     //先扩充一行
-                    sheet.ShiftRows(i + 1,                                 //--开始行
+                    sheet.ShiftRows(i,                                 //--开始行
                         sheet.LastRowNum,                            //--结束行
                         1,                             //--移动大小(行数)--往下移动
                         true,                                   //是否复制行高
@@ -3326,11 +3807,11 @@ namespace nsLims_NPOI
                     IRow targetRow = null;
                     ICell sourceCell = null;
                     ICell targetCell = null;
-                    IRow mySourceStyleRow = sheet.GetRow(i);
+                    IRow mySourceStyleRow = sheet.GetRow(row);
                     if (mySourceStyleRow == null)
                         continue;
 
-                    targetRow = sheet.CreateRow(i + 1);
+                    targetRow = sheet.CreateRow(i);
 
                     for (int m = mySourceStyleRow.FirstCellNum; m < mySourceStyleRow.LastCellNum; m++)
                     {
@@ -3345,24 +3826,34 @@ namespace nsLims_NPOI
 
                     #endregion
 
-                    string[] arrayTemp = dic[i - row];
+                    arrayTemp = dic[i - row];
                     for (int j = col; j < col + arrayTemp.Length; j++)
                     {
-                        ICell cell = sheet.GetRow(i + 1).GetCell(j);
+                        ICell cell = sheet.GetRow(i).GetCell(j);
                         if (cell == null)
                             continue;
                         cell.SetCellValue(arrayTemp[j - col]);
                     }
                 }
+                sheet.ForceFormulaRecalculation = true;//计算Excel公式
 
-                //删除起始行,整体往上移动1行
-                sheet.ShiftRows(row + 1, sheet.LastRowNum, -1);
+                //刷新后才能计算翻页位置
+                saveExcelWithoutAsk(targetPath, wb);
+                classExcelMthd.excelRefresh(targetPath);
+                wb = loadExcelWorkbookI(targetPath);//获取workbook
+                sheet = wb.GetSheetAt(sheetIndex);//获取sheet
+                sheet = dealMergedAreaInPages(sheet);
+
+                //删除起始行,整体往上移动1行,起始行为标记所在行
+                //sheet.ShiftRows(row + 1, sheet.LastRowNum, -1);
 
                 //计算需要合并的区域,执行按行合并单元格
                 sheet = mergeRowCells(sheet);
                 //计算需要合并的区域,执行按列合并单元格
                 sheet = mergeCells(sheet, colseq, row, row + dic.Count);
 
+                //合并表头的检测项目和分析项
+                mergeTestCell(sheet, "检测项目", "分析项");
 
                 saveExcelWithoutAsk(targetPath, wb);
 
@@ -3374,7 +3865,7 @@ namespace nsLims_NPOI
                 return false;
             }
         }
-        
+
         /// <summary>
         /// 合并指定列,按值相等合并
         /// </summary>
@@ -3408,7 +3899,8 @@ namespace nsLims_NPOI
                         if (tempHSSFCell1 == null)
                             continue;
                         string nowCellValue = getCellStringValueAllCase(tempHSSFCell1);//目前单元格值
-                        string nowTESTNO = getCellStringValueAllCase(tempHSSFRow1.GetCell(2));//目前检测项值
+                        int TESTNO_colIndex = selectPosition(sheet, "检测项目").Y;//检测项目所在列号
+                        string nowTESTNO = getCellStringValueAllCase(tempHSSFRow1.GetCell(TESTNO_colIndex));//目前检测项值
 
                         //如果相等则之前的行号+1,需要根据检测项相等判定合并,检测项默认在第3列
                         if (tempCellValue.Equals(nowCellValue) && tempTESTNO.Equals(nowTESTNO))
@@ -3427,7 +3919,7 @@ namespace nsLims_NPOI
 
                             }
                             tempCellValue = getCellStringValueAllCase(sheet.GetRow(j).GetCell(colList[i]));//更新单元格值
-                            tempTESTNO = getCellStringValueAllCase(sheet.GetRow(j).GetCell(2));//更新检测项值
+                            tempTESTNO = getCellStringValueAllCase(sheet.GetRow(j).GetCell(TESTNO_colIndex));//更新检测项值
                             tempRow = j;
                             beforeRow++;
                         }
@@ -3485,7 +3977,7 @@ namespace nsLims_NPOI
             }
 
             return range;
-            
+
 
 
         }
@@ -3508,7 +4000,22 @@ namespace nsLims_NPOI
 
         }
 
-        
+        /// <summary>
+        /// 合并检测项目和分析项
+        /// </summary>
+        /// <param name="sheet">目标sheet</param>
+        /// <param name="str1">检测项目标记字符串</param>
+        /// <param name="str2">分析项标记字符串</param>
+        private void mergeTestCell(ISheet sheet, string str1, string str2)
+        {
+            Point p1 = selectPosition(sheet, str1);
+            Point p2 = selectPosition(sheet, str2);
+            //不在同一行不合并
+            if (p1.X != p2.X) return;
+            //不是相邻单元格不合并
+            if (p1.Y + 1 != p2.Y) return;
+            sheet.AddMergedRegion(new CellRangeAddress(p1.X, p2.X, p1.Y, p2.Y));
+        }
 
         /// <summary>
         /// 合并指定行,按值相等合并
@@ -3540,7 +4047,7 @@ namespace nsLims_NPOI
                     }
                     int tempCol = tempHSSFRow.FirstCellNum;//最新列号,作为需要合并的起始列
                     int beforeCol = tempHSSFRow.FirstCellNum;//之前的列号,作为需要合并的结束列
-                    for (int j = tempHSSFRow.FirstCellNum + 1; j <= tempHSSFRow.LastCellNum; j++)//遍历列的指定行集合
+                    for (int j = tempHSSFRow.FirstCellNum + 1; j < tempHSSFRow.LastCellNum; j++)//遍历列的指定行集合
                     {
 
                         IRow tempHSSFRow1 = sheet.GetRow(i);
@@ -3644,7 +4151,7 @@ namespace nsLims_NPOI
                     }
                     break;
                 case NPOI.SS.UserModel.CellType.String:
-                    tempValue = tCell.StringCellValue.Trim();
+                    tempValue = tCell.StringCellValue;
                     break;
                 case NPOI.SS.UserModel.CellType.Unknown:
                     break;
@@ -3710,7 +4217,7 @@ namespace nsLims_NPOI
         //            }
         //            break;
         //        case NPOI.SS.UserModel.CellType.String:
-        //            tempValue = tCell.StringCellValue.Trim();
+        //            tempValue = tCell.StringCellValue;
         //            break;
         //        case NPOI.SS.UserModel.CellType.Unknown:
         //            break;

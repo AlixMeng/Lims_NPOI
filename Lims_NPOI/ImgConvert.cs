@@ -200,6 +200,56 @@ namespace nsLims_NPOI
             doc.SaveToFile(newPath);
         }
 
+        //向签发日期后添加日期
+        /// <summary>
+        /// 向签发日期后添加日期
+        /// </summary>
+        /// <param name="oldPath"></param>
+        /// <param name="newPath"></param>
+        /// <param name="flagTxt">要查找的字符串</param>
+        /// <param name="issueDate">要写入的日期</param>
+        public void addIssueDateToPdf(string oldPath, string newPath, string flagTxt, string issueDate)
+        {
+            try
+            {
+                //Create a pdf document
+                PdfDocument doc = new PdfDocument();
+                doc.LoadFromFile(oldPath);
+
+                PdfPageBase page = null;
+                PdfTextFind[] result = null;
+                for (int i = 0; i < doc.Pages.Count; i++)
+                {
+                    page = doc.Pages[i];
+                    result = page.FindText(flagTxt).Finds;
+                    if (result.Length > 0)
+                    {
+                        break;
+                    }
+                }
+                //如果没找到标记字符串,记录并返回
+                if (result == null || result.Length == 0)
+                {
+                    classLims_NPOI.WriteLog("标记字符串未找到", "");
+                    return;
+                }
+
+                //获取第一次出现文字的坐标，宽度和高度  
+                PointF pointf = result[0].Position;
+                //获取文字的宽高
+                SizeF size = result[0].Size;
+
+                AlignText(page, issueDate, pointf.X + size.Width  + 50, pointf.Y + 3);
+                //save pdf file
+                doc.SaveToFile(newPath);
+                doc.Close();
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+        }
+
         //向PDF指定位置添加图片
         /// <summary>
         /// 向PDF指定位置添加图片,按照标记字符串
@@ -375,5 +425,22 @@ namespace nsLims_NPOI
 
         }
 
+        public void string2Image(string str, string imgPath)
+        {
+            Graphics g = Graphics.FromImage(new Bitmap(1, 1));
+            Font font = new Font("宋体", 10);
+            SizeF sizeF = g.MeasureString(str, font); //测量出字体的高度和宽度  
+            Brush brush; //笔刷，颜色  
+            brush = Brushes.Lime;
+            PointF pf = new PointF(0, 0);
+            Bitmap img = new Bitmap(Convert.ToInt32(sizeF.Width), Convert.ToInt32(sizeF.Height));
+            g = Graphics.FromImage(img);
+            g.DrawString(str, font, brush, pf);
+            //输出图片  
+            MemoryStream ms = new MemoryStream();
+            img.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            //Response.BinaryWrite(ms.ToArray());
+        }
+        
     }
 }

@@ -37,18 +37,18 @@ namespace nsLims_NPOI
                 EXCEL.Workbooks workBooks = null;
                 EXCEL.Worksheet sheet = null;
                 try
-                {                    
+                {
                     excel = new EXCEL.ApplicationClass();
                     //excel.DisplayAlerts = true;
                     workBooks = excel.Workbooks;
-                    workBook = workBooks.Open(strSourceFile, missing, missing, 
-                        missing, missing, missing, missing, missing, 
+                    workBook = workBooks.Open(strSourceFile, missing, missing,
+                        missing, missing, missing, missing, missing,
                         missing, missing, missing, missing, missing,
                         missing, missing);
 
                     //设置格式，导出成PDF
                     sheet = (EXCEL.Worksheet)workBook.Worksheets[1];//下载从1开始
-                    
+
                     //把sheet设置成横向
                     //sheet.PageSetup.Orientation = EXCEL.XlPageOrientation.xlLandscape;
                     //可以设置sheet页的其他相关设置，不列举
@@ -57,14 +57,14 @@ namespace nsLims_NPOI
                 }
                 catch (Exception ex)
                 {
-                    classLims_NPOI.WriteLog(ex,"");
+                    classLims_NPOI.WriteLog(ex, "");
                     flag = false;
                 }
                 finally
                 {
                     if (sheet != null)
                     {
-                       
+
                         Marshal.ReleaseComObject(sheet);
                         //Marshal.FinalReleaseComObject(sheet);
                         sheet = null;
@@ -205,79 +205,6 @@ namespace nsLims_NPOI
 
         }
 
-        /// <summary>
-        /// excel刷新
-        /// </summary>
-        /// <param name="strSourceFile">excel文件绝对路径</param>
-        /// <returns></returns>
-        public static bool excelRefresh(string strSourceFile)
-        {
-            bool flag = false;
-            if (File.Exists(strSourceFile))
-            {                
-                object missing = Type.Missing;
-                string newFile = System.Guid.NewGuid().ToString();
-                string strTargetFile = strSourceFile.Substring(0, strSourceFile.LastIndexOf("\\")+1) 
-                    + newFile.ToString()
-                    + strSourceFile.Substring(strSourceFile.LastIndexOf("."));
-                string targetFile = strTargetFile;
-                EXCEL.ApplicationClass excel = null;
-                EXCEL.Workbook workBook = null;
-                EXCEL.Workbooks workBooks = null;
-                try
-                {
-                    excel = new EXCEL.ApplicationClass();
-                    workBooks = excel.Workbooks;
-                    workBook = workBooks.Open(strSourceFile, missing, missing,
-                        missing, missing, missing, missing, missing,
-                        missing, missing, missing, missing, missing,
-                        missing, missing);
-                    //EXCEL.XlFileFormat.xlAddIn: xls
-                    //XlFileFormat.xlOpenXMLWorkbook:          xlsx                    
-                    workBook.SaveAs(targetFile, workBook.FileFormat, missing, missing, missing, missing, EXCEL.XlSaveAsAccessMode.xlNoChange,
-                        missing, missing, missing, missing, missing);                    
-                }
-                catch (Exception ex)
-                {
-                    classLims_NPOI.WriteLog(ex, "");
-                    flag = false;
-                }
-                finally
-                {
-                    if (workBook != null)
-                    {
-                        workBook.Close(false, missing, missing);
-                        Marshal.ReleaseComObject(workBook);
-                        //Marshal.FinalReleaseComObject(workBook);
-                        workBook = null;
-                    }
-                    if (workBooks != null)
-                    {
-                        workBooks.Close();
-                        Marshal.ReleaseComObject(workBooks);
-                        workBook = null;
-                    }
-                    if (excel != null)
-                    {
-                        excel.Quit();
-                        Marshal.ReleaseComObject(excel);
-                        //Marshal.FinalReleaseComObject(excel);
-                        excel = null;
-
-                        //flag = KillSpecialExcel(excel);
-                    }
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-
-
-                }
-                string strOldFileName = strSourceFile.Substring(strSourceFile.LastIndexOf("\\") + 1, strSourceFile.Length-strSourceFile.LastIndexOf("\\")-1);
-                File.Delete(strSourceFile);
-                Computer MyComputer = new Computer();
-                MyComputer.FileSystem.RenameFile(strTargetFile, strOldFileName);
-            }
-            return flag;
-        }
 
         #endregion
 
@@ -309,7 +236,7 @@ namespace nsLims_NPOI
             }
         }
         #endregion
-        
+
         #region 把指定WORD转换成PDF
 
         /// <summary>
@@ -332,7 +259,7 @@ namespace nsLims_NPOI
                     WORD.Document doc = wordApp.Documents.Open(ref strSourceFile, ref Nothing, ref Nothing, ref Nothing, ref Nothing, ref Nothing, ref Nothing,
                         ref Nothing, ref Nothing, ref Nothing, ref Nothing, ref Nothing, ref Nothing, ref Nothing, ref Nothing, ref Nothing);
 
-                    
+
                     //设置保存的格式 
                     object filefarmat = WORD.WdSaveFormat.wdFormatPDF;
                     //保存为PDF
@@ -351,8 +278,8 @@ namespace nsLims_NPOI
                 classLims_NPOI.WriteLog(ex, "");
                 return false;
             }
-            
-            
+
+
         }
 
         /// <summary>
@@ -404,9 +331,9 @@ namespace nsLims_NPOI
                     false,
                     WdExportOptimizeFor.wdExportOptimizeForPrint, WdExportRange.wdExportAllDocument, 1, 1,
                     WORD.WdExportItem.wdExportDocumentWithMarkup, false, false, WdExportCreateBookmarks.wdExportCreateNoBookmarks,
-                    true, false, false, oMissing);  
+                    true, false, false, oMissing);
 
-                flag  =true;
+                flag = true;
             }
             catch (Exception exception)
             {
