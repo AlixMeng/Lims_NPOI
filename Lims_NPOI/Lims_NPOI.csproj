@@ -6,7 +6,7 @@
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{EBFAE04E-258C-46D8-82C6-2719AB367025}</ProjectGuid>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Lims_NPOI</RootNamespace>
     <AssemblyName>Lims_NPOI</AssemblyName>
@@ -124,8 +124,11 @@
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Web.Services" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
@@ -150,6 +153,7 @@
     </Compile>
     <Compile Include="ImgConvert.cs" />
     <Compile Include="MergePDF.cs" />
+    <Compile Include="PdfSignGJ.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="classLims_NPOI.resx">
@@ -170,6 +174,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <None Include="app.config" />
     <None Include="Lims_NPOI.pfx" />
     <None Include="Lims_NPOI.snk.pfx" />
     <None Include="Properties\Settings.settings">

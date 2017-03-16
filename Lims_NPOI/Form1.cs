@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
+using wsdlLib;
 
 namespace nsLims_NPOI
 {
     public partial class Form1 : Form
     {
-        
         public Form1()
         {
             InitializeComponent();
@@ -25,20 +25,26 @@ namespace nsLims_NPOI
         {
             button1.Enabled = false;
 
-            classLims_NPOI cln = new classLims_NPOI();
+            //classLims_NPOI cln = new classLims_NPOI();
             //ConvertbyPrinter cbp = new ConvertbyPrinter();
+            classExcelMthd fcc = new classExcelMthd();
             //ImgConvert ic = new ImgConvert();
+            //ic.addBackgroundImg2Pdf("D:\\111.pdf", "D:\\222.pdf", "D:\\dw.jpg");
+            fcc.addImage2Excel_byOffice("D:\\默认封面.xls", 0, "D:\\label2.bmp", "&[二维码]", 90, 90);
+
+            #region
+
             //FileConvertClass fcc = new FileConvertClass();
             //MergePDF mpf = new MergePDF();
             //DocXAction dxa = new DocXAction();
             //classExcelMthd cem = new classExcelMthd();
+            //PdfSignGJ psg = new PdfSignGJ();
+            //string strMsg = psg.KeySign("检验报告专用章", "D:\\biceng\\pdf\\170117191241_AXFA1W170117004.pdf", "D:\\biceng", "GZ", "123", "D:\\biceng\\pdf", "test_signed");
+            //alert(strMsg);
+            //string[] flags = { "&[样品编号]", "&[备注]" };
+            //cln.protectExcel("D:\\默认首页.xls", 0, flags, "123");
 
-            string[] flags = { "&[样品编号]", "&[备注]" };
-            cln.protectExcel("D:\\默认首页.xls", 0, flags, "123");
 
-
-
-            #region
             //cem.protectWorkBook("D:\\TEST.xls", "123");
             //cln.protectSheets("D:\\TEST.xls", "123");
             //cln.stretchLastRowHeight("D:\\TEST.xls", 0);

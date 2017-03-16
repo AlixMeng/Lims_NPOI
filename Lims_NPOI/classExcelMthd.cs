@@ -30,7 +30,7 @@ namespace nsLims_NPOI
             var selectObj = rng.Select();
             float PicLeft, PicTop;    //距离左边距离，顶部距离
             PicTop = Convert.ToSingle(rng.Top);
-            PicLeft = Convert.ToSingle(rng.Left);
+            PicLeft = Convert.ToSingle(rng.Left);            
 
             var shapes = sheet.Shapes;
             var newShape = shapes.AddPicture(imagePath, Microsoft.Office.Core.MsoTriState.msoFalse,

@@ -137,6 +137,7 @@ namespace nsLims_NPOI
         //    return int.Parse(s.Substring(n));
         //}
         #endregion
+        
 
         /// <summary>
         /// 设置单元格样式的背景色项
@@ -144,7 +145,7 @@ namespace nsLims_NPOI
         /// <param name="style">源格式</param>
         /// <param name="colorName">颜色名</param>
         /// <returns>目标格式</returns>
-        public HSSFCellStyle setCellBGColor(HSSFCellStyle style, string colorName)
+        private ICellStyle setCellBGColor(ICellStyle style, string colorName)
         {
             short color = System.Convert.ToInt16(string2ColorIndex(colorName));
             style.FillPattern = FillPattern.SolidForeground;
@@ -1796,7 +1797,7 @@ namespace nsLims_NPOI
             {
                 IWorkbook wb = loadExcelWorkbookI(filePath);
                 //首先解锁指定单元格
-                protectCells(wb.GetSheetAt(sheetIndex), flags);
+                //protectCells(wb.GetSheetAt(sheetIndex), flags);
                 //然后锁定所有sheets
                 protectSheets(wb, psw);
                 saveExcelWithoutAsk(filePath, wb);
@@ -1816,6 +1817,7 @@ namespace nsLims_NPOI
                     ISheet sheet = wb.GetSheetAt(i);
                     if (sheet == null) continue;
                     sheet.ProtectSheet(psw);
+                    colorToLockedCell(sheet, "Yellow", "Green");
                 }
             }
             catch(Exception ex)
@@ -1826,6 +1828,7 @@ namespace nsLims_NPOI
         }
 
         //按照标记字符串查找Cell并设置Cell不锁定
+        //实测设置Cell锁定对合并单元格有要求,考虑能不能通过对模板设置而不设置单元格锁定
         private void protectCells(ISheet sheet, string[] flags) {
 
             try
@@ -1858,17 +1861,25 @@ namespace nsLims_NPOI
                     if (cell == null) continue;
                     cell.CellStyle.IsLocked = false;
                 }
-            }catch(Exception ex)
+
+                colorToLockedCell(sheet, "Yellow", "White");
+            }
+            catch(Exception ex)
             {
                 WriteLog(ex, "");
                 return;
             }
         }
 
-        //标记被锁定的单元格背景色为红色
-        public void colorToLockedCell(string filePath)
+        //标记没有被锁定的 和被锁定的 单元格背景色
+        /// <summary>
+        /// 标记没有被锁定的 和被锁定的 单元格背景色
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <param name="colorNameFalse">没有被锁定的单元格背景色</param>
+        /// <param name="colorNameTrue">被锁定的单元格背景色</param>
+        private void colorToLockedCell(ISheet sheet, string colorNameFalse, string colorNameTrue)
         {
-            ISheet sheet = loadExcelSheetI(filePath, 0);
             //首先锁定所有单元格
             for (int i = 0; i < sheet.LastRowNum; i++)
             {
@@ -1881,6 +1892,14 @@ namespace nsLims_NPOI
                     if(cell.CellStyle==null) continue;
                     if (cell.CellStyle.IsLocked == false)
                     {
+                        //cell.CellStyle.FillBackgroundColor = (short)string2ColorIndex(colorNameFalse);//"Yellow"
+                        setCellBGColor(cell.CellStyle, colorNameFalse);
+                    }
+                    else if (cell.CellStyle.IsLocked == true)
+                    {
+                        //cell.CellStyle.FillBackgroundColor = (short)string2ColorIndex(colorNameTrue);//"White"
+                        setCellBGColor(cell.CellStyle, colorNameTrue);
+                        cell.SetCellValue("被锁定");
                     }
                 }
             }
