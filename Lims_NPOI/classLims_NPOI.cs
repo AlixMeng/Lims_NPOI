@@ -26,8 +26,9 @@ namespace nsLims_NPOI
         //61 * 13.5 * 20 + 20.25 * 20;//16875
         //58 * 14.25 * 20 + 19.75 * 20;//16925
         //41 * 20 * 20 + 22.5 * 20;//16850
-        private static double PAGE_HEIGHT = 16430;//手动设置的测试总高
-        private static double CM_POUND = 28.35;
+        //16403, 16865
+        private static double PAGE_HEIGHT = 16403;//手动设置的测试总高,使用不同字体会有不同的总高度,此处使用宋体10号字体
+        private static double CM_POUND = 28.346456692913389;
         //A4纸的像素宽度为84.5,,倍数为278
         private static double PAGE_WIDTH = 84.5;
         //workbook
@@ -137,7 +138,7 @@ namespace nsLims_NPOI
         //    return int.Parse(s.Substring(n));
         //}
         #endregion
-        
+
 
         /// <summary>
         /// 设置单元格样式的背景色项
@@ -441,7 +442,7 @@ namespace nsLims_NPOI
         {
             try
             {
-                
+
                 classExcelMthd.excelRefresh(filePath);
                 int pages = 0;
                 IWorkbook wb = loadExcelWorkbookI(filePath);
@@ -580,7 +581,9 @@ namespace nsLims_NPOI
                     }
                 }
                 return false;
-            }catch(Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 WriteLog(ex, "");
                 return false;
             }
@@ -588,11 +591,16 @@ namespace nsLims_NPOI
         }
 
         //获取sheet每一页的第一行索引,第一页除外
+        /// <summary>
+        /// 获取sheet每一页的第一行索引,第一页除外
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <returns></returns>
         private List<int> getNewPageFirstRow(ISheet sheet)
         {
             List<int> arrayFr = new List<int>();
             try
-            {               
+            {
                 int startHeadRow, endHeadRow, startCol, endCol;
                 int[] iRange = getRepeatingRowsRange(sheet);
                 if (iRange == null)
@@ -658,7 +666,7 @@ namespace nsLims_NPOI
             }
             catch (Exception ex)
             {
-                WriteLog(ex,"");
+                WriteLog(ex, "");
                 return arrayFr;
             }
 
@@ -704,7 +712,7 @@ namespace nsLims_NPOI
             try
             {
                 //NPOI自动换行后行高度取值不变,需要用COM组件重新保存
-                classExcelMthd.excelRefresh(filePath);
+                //classExcelMthd.excelRefresh(filePath);
                 IWorkbook wb = loadExcelWorkbookI(filePath);
                 ISheet sheet = wb.GetSheetAt(sheetIndex);
 
@@ -908,15 +916,137 @@ namespace nsLims_NPOI
         {
             IWorkbook wb = loadExcelWorkbookI(filePath);
             dealMergedAreaInPages(wb.GetSheetAt(sheetIndex));
-            saveExcelWithoutAsk("D:\\TEST001.xls", wb);
+            saveExcelWithoutAsk(filePath, wb);
         }
 
+        /// <summary>
+        /// 处理2页之间的合并单元格,上下单独合并
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <param name="sheetIndex">工作表索引</param>
+        /// <param name="rowIndex">页首行行号</param>
+        private void dealMergedBetweenPages(string filePath, int sheetIndex, int rowIndex)
+        {
+            IWorkbook wb = loadExcelWorkbookI(filePath);
+            ISheet sheet = wb.GetSheetAt(sheetIndex);
+            IRow row = sheet.GetRow(rowIndex);
+            if (row == null)
+                return;
+            int i = 0;
+            while (i < row.LastCellNum)
+            {
+                ICell cell = row.GetCell(i);
+                if (cell.IsMergedCell)
+                {
+                    //先拆分再重新合并
+                    int[] mergedArea = classExcelMthd.getMergedArea(filePath, 0+1, rowIndex+1, i+1, true);
+                    wb = loadExcelWorkbookI(filePath);
+                    sheet = wb.GetSheetAt(sheetIndex);
+                    //合并上一页
+                    int mgIndex1 = sheet.AddMergedRegion(new CellRangeAddress(mergedArea[0], rowIndex - 1, mergedArea[1], mergedArea[3]));
+                    //合并下一页
+                    int mgIndex2 = sheet.AddMergedRegion(new CellRangeAddress(rowIndex, mergedArea[2], mergedArea[1], mergedArea[3]));
+
+                    #region 创建合并后单元格风格,和上一行单元格相同                    
+
+                    ICellStyle IStyle = sheet.GetRow(mergedArea[0] - 1).GetCell(mergedArea[1]).CellStyle;
+                    IStyle.BorderBottom = NPOI.SS.UserModel.BorderStyle.Thin;
+                    IStyle.BorderLeft = NPOI.SS.UserModel.BorderStyle.Thin;
+                    IStyle.BorderRight = NPOI.SS.UserModel.BorderStyle.Thin;
+                    IStyle.BorderTop = NPOI.SS.UserModel.BorderStyle.None;//顶部边框不打印
+                    IStyle.BottomBorderColor = HSSFColor.Black.Index;
+                    IStyle.LeftBorderColor = HSSFColor.Black.Index;
+                    IStyle.RightBorderColor = HSSFColor.Black.Index;
+                    IStyle.TopBorderColor = HSSFColor.White.Index;//顶部边框为默认
+
+                    CellRangeAddress region = sheet.GetMergedRegion(mgIndex1);
+                    for (int j = region.FirstRow; j <= region.LastRow; j++)
+                    {
+                        IRow row1 = HSSFCellUtil.GetRow(j, (HSSFSheet)sheet);
+                        for (int k = region.FirstColumn; k <= region.LastColumn; k++)
+                        {
+                            ICell singleCell = HSSFCellUtil.GetCell(row1, (short)k);
+                            singleCell.CellStyle = IStyle;
+                        }
+                    }
+                    region = sheet.GetMergedRegion(mgIndex2);
+                    for (int j = region.FirstRow; j <= region.LastRow; j++)
+                    {
+                        IRow row1 = HSSFCellUtil.GetRow(j, (HSSFSheet)sheet);
+                        for (int k = region.FirstColumn; k <= region.LastColumn; k++)
+                        {
+                            ICell singleCell = HSSFCellUtil.GetCell(row1, (short)k);
+                            singleCell.CellStyle = IStyle;
+                        }
+                    }
+                    #endregion
+
+                    saveExcelWithoutAsk(filePath, wb);
+                    i = mergedArea[3] + 1;
+                    continue;
+                }
+                else
+                {
+                    i++;
+                    continue;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 处理2页之间的合并单元格,上下单独合并
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="sheetIndex"></param>
+        public void dealMergedAreaInPages_new(string filePath, int sheetIndex)
+        {
+            IWorkbook wb = loadExcelWorkbookI(filePath);
+            ISheet sheet = wb.GetSheetAt(sheetIndex);
+            //获取每页第一行的索引
+            List<int> firstPageRowIndex = getNewPageFirstRow(sheet);
+            foreach (int i in firstPageRowIndex)
+            {
+                IRow row = sheet.GetRow(i);
+                if (row == null) continue;
+
+                int testNoIndex = selectPosition(sheet, "检测项目").Y;
+                //取上一行检测项目值
+                string testNo = getCellStringValueAllCase(sheet.GetRow(i - 1).GetCell(testNoIndex));
+                for (int n = i; n < sheet.LastRowNum; n++)
+                {
+                    //如果检测项目相等,则加一
+                    IRow nRow = sheet.GetRow(n);
+                    if (nRow == null) return;
+                    ICell cell = nRow.GetCell(testNoIndex);
+                    if (cell == null) return;
+                    if (cell.IsMergedCell)
+                    {
+                        dealMergedBetweenPages(filePath, sheetIndex, i);
+                        break;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+
+            }
+        }
+
+        
+
         //为了防止合并后的列跨页,需要更改新一页的数据,在末尾加空格
+        /// <summary>
+        /// 为了防止合并后的列跨页,需要更改新一页的数据,在末尾加空格
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <returns></returns>
         private ISheet dealMergedAreaInPages(ISheet sheet)
         {
             //sheet.FitToPage = false;
             try
-            {                
+            {
                 //获取每页第一行的索引
                 List<int> firstPageRowIndex = getNewPageFirstRow(sheet);
                 foreach (int i in firstPageRowIndex)
@@ -1812,15 +1942,17 @@ namespace nsLims_NPOI
 
         private void protectSheets(IWorkbook wb, string psw)
         {
-            try {
-                for (int i=0; i<wb.NumberOfSheets; i++) {
+            try
+            {
+                for (int i = 0; i < wb.NumberOfSheets; i++)
+                {
                     ISheet sheet = wb.GetSheetAt(i);
                     if (sheet == null) continue;
                     sheet.ProtectSheet(psw);
                     colorToLockedCell(sheet, "Yellow", "Green");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 WriteLog(ex, "");
                 return;
@@ -1829,7 +1961,8 @@ namespace nsLims_NPOI
 
         //按照标记字符串查找Cell并设置Cell不锁定
         //实测设置Cell锁定对合并单元格有要求,考虑能不能通过对模板设置而不设置单元格锁定
-        private void protectCells(ISheet sheet, string[] flags) {
+        private void protectCells(ISheet sheet, string[] flags)
+        {
 
             try
             {
@@ -1864,7 +1997,7 @@ namespace nsLims_NPOI
 
                 colorToLockedCell(sheet, "Yellow", "White");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 WriteLog(ex, "");
                 return;
@@ -1884,12 +2017,12 @@ namespace nsLims_NPOI
             for (int i = 0; i < sheet.LastRowNum; i++)
             {
                 IRow row = sheet.GetRow(i);
-                if (row == null) continue;                
+                if (row == null) continue;
                 for (int j = 0; j < row.LastCellNum; j++)
                 {
                     ICell cell = row.GetCell(j);
                     if (cell == null) continue;
-                    if(cell.CellStyle==null) continue;
+                    if (cell.CellStyle == null) continue;
                     if (cell.CellStyle.IsLocked == false)
                     {
                         //cell.CellStyle.FillBackgroundColor = (short)string2ColorIndex(colorNameFalse);//"Yellow"
@@ -2143,7 +2276,8 @@ namespace nsLims_NPOI
                     break;
             }
         }
-
+        
+        /// <summary>
         /// 获取sheet的最小列号和最大列号
         /// </summary>
         /// <param name="sheet">工作表</param>
@@ -3318,7 +3452,7 @@ namespace nsLims_NPOI
         #endregion
 
         /// <summary>
-        /// 查询值在sheet的位置
+        /// 查询值在sheet的位置,X:行号,Y:列号
         /// </summary>
         /// <param name="sheet">工作表名</param>
         /// <param name="value">标志字符串</param>
@@ -3780,8 +3914,9 @@ namespace nsLims_NPOI
         /// <param name="targetPath">目标文件路径</param>
         /// <param name="dArray">二维数组,第一行为表头</param>
         /// <param name="colListC"></param>
+        /// <param name="updHeight">行高的修改量</param>
         /// <returns></returns>
-        public Boolean reportOneDimDExcel(string modlePath, int sheetIndex, string targetPath, object[] dArray, object[] colListC)
+        public Boolean reportOneDimDExcel(string modlePath, int sheetIndex, string targetPath, object[] dArray, object[] colListC, double updHeight)
         {
             try
             {
@@ -3858,23 +3993,51 @@ namespace nsLims_NPOI
 
                 //刷新后才能计算翻页位置
                 saveExcelWithoutAsk(targetPath, wb);
-                classExcelMthd.excelRefresh(targetPath);
-                wb = loadExcelWorkbookI(targetPath);//获取workbook
-                sheet = wb.GetSheetAt(sheetIndex);//获取sheet
-                sheet = dealMergedAreaInPages(sheet);
 
-                //删除起始行,整体往上移动1行,起始行为标记所在行
-                //sheet.ShiftRows(row + 1, sheet.LastRowNum, -1);
+                #region 不使用NPOI处理格式问题,改为使用COM组件
 
-                //计算需要合并的区域,执行按行合并单元格
-                sheet = mergeRowCells(sheet);
-                //计算需要合并的区域,执行按列合并单元格
-                sheet = mergeCells(sheet, colseq, row, row + dic.Count);
+                //classExcelMthd.excelRefresh(targetPath);
 
-                //合并表头的检测项目和分析项
-                mergeTestCell(sheet, "检测项目", "分析项");
+                //wb = loadExcelWorkbookI(targetPath);//获取workbook
+                //sheet = wb.GetSheetAt(sheetIndex);//获取sheet
+                ////sheet = dealMergedAreaInPages(sheet);//分页处理需要在调整行高之后
 
-                saveExcelWithoutAsk(targetPath, wb);
+                ////删除起始行,整体往上移动1行,起始行为标记所在行
+                ////sheet.ShiftRows(row + 1, sheet.LastRowNum, -1);
+
+                ////计算需要合并的区域,执行按行合并单元格
+                //saveExcelWithoutAsk(targetPath, wb);
+                //mergeRowCells(targetPath, sheetIndex);
+                //wb = loadExcelWorkbookI(targetPath);
+
+                ////计算需要合并的区域,执行按列合并单元格
+                //saveExcelWithoutAsk(targetPath, wb);
+                //mergeCells(targetPath, sheetIndex, colseq, row, row + dic.Count);
+                //wb = loadExcelWorkbookI(targetPath);
+
+                ////调整excel行高,固定地加9.75磅
+                //saveExcelWithoutAsk(targetPath, wb);
+                //classExcelMthd.excelRefreshAndUpdateRowHeight(targetPath, sheetIndex, row, row + dic.Count, updHeight);
+
+                ////分页处理需要在调整行高之后
+                //dealMergedAreaInPages_new(targetPath, sheetIndex);
+
+                //wb = loadExcelWorkbookI(targetPath);                
+                ////合并表头的检测项目和分析项
+                //sheet = wb.GetSheetAt(sheetIndex);
+                //mergeTestCell(sheet, "检测项目", "分析项");
+
+                //saveExcelWithoutAsk(targetPath, wb);
+
+                #endregion
+                                
+                int[] colRange = getColumnRange(sheet);
+                //使用COM组件时,索引从1开始的
+                for (int i = 0; i < colseq.Length; i++) {
+                    colseq[i]++;
+                }
+                //classExcelMthd cem = new classExcelMthd();
+                new classExcelMthd().reportOneDimDExcelFormat(targetPath, sheetIndex+1, colseq, row+1, row + dic.Count+1, updHeight, colRange[0]+1, colRange[1]+1);
 
                 return true;
             }
@@ -3953,6 +4116,80 @@ namespace nsLims_NPOI
             {
                 WriteLog(ex, "");
                 return sheet;
+            }
+        }
+
+        /// <summary>
+        /// 合并指定列,按值相等合并
+        /// </summary>
+        /// <param name="sheetName">目标sheet</param>
+        /// <param name="colList">要合并的单元格所在列</param>
+        /// <param name="startRow">开始行</param>
+        /// <param name="endRow">结束行</param>
+        public void mergeCells(string sourcePath, int sheetIndex, int[] colList, int startRow, int endRow)
+        {
+            try
+            {
+                ISheet sheet = loadExcelSheetI(sourcePath, sheetIndex);
+                //sheet.RemoveMergedRegion(0);
+                for (int i = 0; i < colList.Length; i++)//遍历需要合并的列
+                {
+                    #region 检查数值相等并合并当前列
+                    IRow tempHSSFRow = sheet.GetRow(startRow);
+                    if (tempHSSFRow == null)
+                        continue;
+                    ICell tempHSSFCell = tempHSSFRow.GetCell(colList[i]);
+                    if (tempHSSFCell == null)
+                        continue;
+                    string tempCellValue = getCellStringValueAllCase(tempHSSFCell);//最新单元格值
+                    string tempTESTNO = getCellStringValueAllCase(tempHSSFRow.GetCell(2));//最新检测项值
+                    int tempRow = startRow;//最新行号,作为需要合并的起始行
+                    int beforeRow = startRow;//之前的行号,作为需要合并的结束行
+                    for (int j = startRow + 1; j <= endRow; j++)//遍历列的指定行集合
+                    {
+                        IRow tempHSSFRow1 = sheet.GetRow(j);
+                        if (tempHSSFRow1 == null)
+                            continue;
+                        ICell tempHSSFCell1 = tempHSSFRow1.GetCell(colList[i]);
+                        if (tempHSSFCell1 == null)
+                            continue;
+                        string nowCellValue = getCellStringValueAllCase(tempHSSFCell1);//目前单元格值
+                        int TESTNO_colIndex = selectPosition(sheet, "检测项目").Y;//检测项目所在列号
+                        string nowTESTNO = getCellStringValueAllCase(tempHSSFRow1.GetCell(TESTNO_colIndex));//目前检测项值
+
+                        //如果相等则之前的行号+1,需要根据检测项相等判定合并,检测项默认在第3列
+                        if (tempCellValue.Equals(nowCellValue) && tempTESTNO.Equals(nowTESTNO))
+                        {
+                            beforeRow++;
+
+                        }
+                        else//如果不等则合并记录下的单元格区域,并记录新的行号和单元格值
+                        {
+                            if (tempRow < beforeRow)//如果最新行号小于遍历的上一个行号
+                            {
+
+                                //设置一个合并单元格区域，使用上下左右定义CellRangeAddress区域
+                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+                                //sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(tempRow, beforeRow, colList[i], colList[i]));
+                                classExcelMthd.mergeRowCells_ByOffice(sourcePath, sheetIndex+1, tempRow+1, beforeRow+1, colList[i]+1, colList[i]+1);
+
+                            }
+                            tempCellValue = getCellStringValueAllCase(sheet.GetRow(j).GetCell(colList[i]));//更新单元格值
+                            tempTESTNO = getCellStringValueAllCase(sheet.GetRow(j).GetCell(TESTNO_colIndex));//更新检测项值
+                            tempRow = j;
+                            beforeRow++;
+                        }
+
+
+                        #endregion
+                    }
+                }
+                return;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return;
             }
         }
 
@@ -4112,6 +4349,82 @@ namespace nsLims_NPOI
             {
                 WriteLog(ex, "");
                 return sheet;
+            }
+        }
+
+        /// <summary>
+        /// 合并指定行,按值相等合并
+        /// </summary>
+        public void mergeRowCells(string sourcePath, int sheetIndex)
+        {
+            try
+            {
+                ISheet sheet = loadExcelSheetI(sourcePath, sheetIndex);
+                int startRow = sheet.FirstRowNum;
+                int endRow = sheet.LastRowNum;
+                for (int i = startRow; i < endRow; i++)//遍历需要合并的行
+                {
+                    #region 检查数值相等并合并当前列
+                    IRow tempHSSFRow = sheet.GetRow(i);
+                    if (tempHSSFRow == null)
+                        continue;
+                    ICell tempHSSFCell = tempHSSFRow.GetCell(Int32.Parse(tempHSSFRow.FirstCellNum.ToString()));
+                    if (tempHSSFCell == null)
+                        continue;
+                    string tempCellValue = getCellStringValueAllCase(tempHSSFCell);//最新单元格值
+                    if (tempCellValue == null)
+                    {
+                        tempCellValue = "";
+                    }
+                    int tempCol = tempHSSFRow.FirstCellNum;//最新列号,作为需要合并的起始列
+                    int beforeCol = tempHSSFRow.FirstCellNum;//之前的列号,作为需要合并的结束列
+                    for (int j = tempHSSFRow.FirstCellNum + 1; j < tempHSSFRow.LastCellNum; j++)//遍历列的指定行集合
+                    {
+
+                        IRow tempHSSFRow1 = sheet.GetRow(i);
+                        if (tempHSSFRow1 == null)
+                            continue;
+                        ICell tempHSSFCell1 = tempHSSFRow1.GetCell(j);
+                        if (tempHSSFCell1 == null)
+                            continue;
+                        string nowCellValue = getCellStringValueAllCase(tempHSSFCell1);//目前单元格值
+                        if (nowCellValue == null)
+                        {
+                            nowCellValue = "";
+                        }
+
+                        if (tempCellValue.Equals(nowCellValue))//如果相等则之前的列号+1
+                        {
+                            beforeCol++;
+
+                        }
+                        else//如果不等则合并记录下的单元格区域,并记录新的列号和单元格值
+                        {
+                            //如果最新列号小于遍历的上一个列号,且单元格值非空
+                            if (tempCol < beforeCol && !tempCellValue.Equals(""))
+                            {
+
+                                //设置一个合并单元格区域，使用上下左右定义CellRangeAddress区域
+                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+                                //sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i, tempCol, beforeCol));
+                                classExcelMthd.mergeRowCells_ByOffice(sourcePath, sheetIndex+1, i+1, i+1, tempCol+1, beforeCol+1);
+
+                            }
+                            tempCellValue = getCellStringValueAllCase((ICell)sheet.GetRow(i).GetCell(j));//更新单元格值
+                            tempCol = j;
+                            beforeCol++;
+                        }
+
+
+                        #endregion
+                    }
+                }
+                return;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return;
             }
         }
 

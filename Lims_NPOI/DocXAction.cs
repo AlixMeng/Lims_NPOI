@@ -4,7 +4,7 @@ using System.Linq;
 using Novacode;
 using System.IO;
 using WORD = Microsoft.Office.Interop.Word;
-
+//using DocumentFormat.OpenXml.Wordprocessing;
 
 namespace nsLims_NPOI
 {
@@ -234,6 +234,46 @@ namespace nsLims_NPOI
             return p;
         }
 
+        //获取带图片的段落
+        /// <summary>
+        /// 获取带图片的段落
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <returns>段落数组</returns>
+        private List<Paragraph> getPictureParagraphs(DocX doc)
+        {
+            List<Paragraph> listPar = new List<Paragraph>();
+            foreach (Paragraph pointPar in doc.Paragraphs)
+            {
+                if (pointPar.Pictures.Count > 0)
+                    listPar.Add(pointPar);
+            }
+            if (listPar.Count == 0)
+                return null;
+            else
+                return listPar;
+        }
+
+        //获取段落的图片
+        /// <summary>
+        /// 获取段落的图片
+        /// </summary>
+        /// <param name="pointPar">段落对象</param>
+        /// <param name="pictureIndex">图片在段落的索引</param>
+        /// <returns>图片对象</returns>
+        private Picture getParagraphPictures(Paragraph pointPar, int pictureIndex)
+        {
+            Picture pic = null;
+            if (pointPar.Pictures.Count >= pictureIndex)
+            {
+                pic = pointPar.Pictures[pictureIndex];                
+            }
+            return pic;
+
+        }
+
+        
+
         /// <summary>
         /// 替换字符串（替换标记）
         /// </summary>
@@ -292,6 +332,113 @@ namespace nsLims_NPOI
             Boolean bl = ReplaceFlag(doc, replaceFlag, newValue, alignment, isAllReplace);
             doc.SaveAs(toPath);
             return bl;
+        }
+
+        //替换图片,使用原始尺寸
+        /// <summary>
+        /// 替换图片,使用原始尺寸
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="parIndex">有图片的段落的索引</param>
+        /// <param name="imgPath">图片路径</param>
+        /// <param name="alignment">对齐方式</param>
+        /// <returns></returns>
+        private Picture replacePicture(DocX doc, int parIndex, string imgPath, string alignment)
+        {
+            List<Paragraph> listPar = getPictureParagraphs(doc);
+            if (listPar == null)
+                return null;
+            if (listPar.Count < parIndex)
+                return null;
+            if (getParagraphPictures(listPar[parIndex], 0) == null)
+                return null;
+
+            Novacode.Image img = null;
+            try
+            {
+                img = doc.AddImage(imgPath);
+            }
+            catch (System.InvalidOperationException e)
+            {
+                classLims_NPOI.WriteLog(e, "");
+                return null;
+            }
+            Picture pic = img.CreatePicture();
+
+            Paragraph par = listPar[parIndex];
+            par.Pictures[0].Remove();
+
+            //par.Pictures.Add(pic);
+            par.InsertPicture(pic);
+
+            pic.Height = Convert.ToInt32(Convert.ToDouble(pic.Height) / Convert.ToDouble(pic.Width) * Convert.ToDouble(doc.PageWidth - doc.MarginLeft - doc.MarginRight));
+            pic.Width = Convert.ToInt32(Convert.ToDouble(doc.PageWidth - doc.MarginLeft - doc.MarginRight));
+
+            return pic;
+        }
+
+        //替换图片,使用指定的尺寸
+        /// <summary>
+        /// 替换图片,使用指定的尺寸
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="parIndex">有图片的段落的索引</param>
+        /// <param name="imgPath">图片路径</param>
+        /// <param name="alignment">对齐方式</param>
+        /// <param name="height">图片高度</param>
+        /// <param name="width">图片宽度</param>
+        private void replacePicture(DocX doc, int parIndex, string imgPath, string alignment, double height, double width)
+        {
+            Picture pic = replacePicture(doc, parIndex, imgPath, alignment);
+
+            if (pic == null)
+            {
+                return;
+            }
+
+            if (Convert.ToInt32(height) == 0 && Convert.ToInt32(width) == 0)
+            {
+                return;
+            }
+            else if (Convert.ToInt32(height) == 0)
+            {
+                height = Convert.ToDouble(pic.Height) / Convert.ToDouble(pic.Width) * width;
+            }
+            else if (Convert.ToInt32(width) == 0)
+            {
+                width = Convert.ToDouble(pic.Width) / Convert.ToDouble(pic.Height) * height;
+            }
+
+            pic.Height = Convert.ToInt32(height);
+            pic.Width = Convert.ToInt32(width);
+        }
+
+        //替换指定段落的第一个图片
+        /// <summary>
+        /// 替换指定段落的第一个图片, 图片高度或宽度为0时使用图片的原始尺寸
+        /// </summary>
+        /// <param name="fromPath">文件路径</param>
+        /// <param name="parIndex">有图片的段落的索引</param>
+        /// <param name="imgPath">图片路径</param>
+        /// <param name="alignment">对齐方式</param>
+        /// <param name="height">图片高度</param>
+        /// <param name="width">图片宽度</param>
+        public void replacePicture(string fromPath, int parIndex, string imgPath, string alignment, double height, double width)
+        {
+            if (File.Exists(fromPath))
+            {
+                Novacode.DocX doc = Novacode.DocX.Load(fromPath);
+                if (height == 0 || width == 0)
+                {
+                    replacePicture(doc, parIndex, imgPath, alignment);
+                }
+                else
+                {
+                    replacePicture(doc, parIndex, imgPath, alignment, height, width);
+                }
+                doc.Save();
+            }
+            return;
         }
 
         //合并
@@ -364,6 +511,107 @@ namespace nsLims_NPOI
             }
         }
 
+
+        //插入图片（用户自定义图片尺寸）, LEFT,RIGHT,CENTER
+        /// <summary>
+        /// 插入图片（用户自定义图片尺寸）
+        /// </summary>
+        /// <param name="docPath">文件路径</param>
+        /// <param name="replaceFlag">替换标记</param>
+        /// <param name="imgPath">图片路径</param>
+        /// <param name="alignment">水平对齐方式,可以是:LEFT,RIGHT,CENTER</param>
+        /// <param name="height">图片高度,为0时使用原始尺寸</param>
+        /// <param name="width">图片宽度,为0时使用原始尺寸</param>
+        public void InsertPicture(string docPath, string replaceFlag, string imgPath, string alignment, double height, double width)
+        {
+            if (File.Exists(docPath))
+            {
+                Novacode.DocX doc = Novacode.DocX.Load(docPath);
+                if(height == 0 || width == 0)
+                {                    
+                    InsertPicture(doc, replaceFlag, imgPath, alignment);
+                }
+                else
+                {
+                    InsertPicture(doc, replaceFlag, imgPath, alignment, height, width);
+                }
+                doc.Save();
+            }
+            return;
+        }
+
+        /// <summary>
+        /// 插入图片（用户自定义图片尺寸）
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="replaceFlag"></param>
+        /// <param name="imgPath"></param>
+        /// <param name="height"></param>
+        /// <param name="width"></param>
+        public void InsertPicture(DocX doc, string replaceFlag, string imgPath, string alignment, double height, double width)
+        {
+            Picture pic = InsertPicture(doc, replaceFlag, imgPath, alignment);
+
+            if (pic == null)
+            {
+                return;
+            }
+
+            if (Convert.ToInt32(height) == 0 && Convert.ToInt32(width) == 0)
+            {
+                return;
+            }
+            else if (Convert.ToInt32(height) == 0)
+            {
+                height = Convert.ToDouble(pic.Height) / Convert.ToDouble(pic.Width) * width;
+            }
+            else if (Convert.ToInt32(width) == 0)
+            {
+                width = Convert.ToDouble(pic.Width) / Convert.ToDouble(pic.Height) * height;
+            }
+
+            pic.Height = Convert.ToInt32(height);
+            pic.Width = Convert.ToInt32(width);
+
+        }
+
+        /// <summary>
+        /// 插入图片（对图片尺寸没有要求）
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="replaceFlag"></param>
+        /// <param name="imgPath"></param>
+        public Picture InsertPicture(DocX doc, string replaceFlag, string imgPath, string alignment)
+        {
+            Paragraph p = GetParagraphByReplaceFlag(doc, replaceFlag, alignment);
+
+            if (p == null)
+            {
+                return null;
+            }
+
+            p.ReplaceText(replaceFlag, "");
+
+            Novacode.Image img = null;
+            try
+            {
+                img = doc.AddImage(imgPath);
+            }
+            catch (System.InvalidOperationException e)
+            {
+                classLims_NPOI.WriteLog(e, "");
+                return null;
+            }
+
+            Picture pic = img.CreatePicture();
+
+            //p.AppendPicture(pic);
+            p.InsertPicture(pic);
+
+            pic.Height = Convert.ToInt32(Convert.ToDouble(pic.Height) / Convert.ToDouble(pic.Width) * Convert.ToDouble(doc.PageWidth - doc.MarginLeft - doc.MarginRight));
+            pic.Width = Convert.ToInt32(Convert.ToDouble(doc.PageWidth - doc.MarginLeft - doc.MarginRight));
+            return pic;
+        }
 
         #endregion
 

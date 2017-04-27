@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows.Forms;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
@@ -27,12 +28,54 @@ namespace nsLims_NPOI
 
             //classLims_NPOI cln = new classLims_NPOI();
             //ConvertbyPrinter cbp = new ConvertbyPrinter();
-            classExcelMthd fcc = new classExcelMthd();
+            //classExcelMthd cem = new classExcelMthd();
             //ImgConvert ic = new ImgConvert();
-            //ic.addBackgroundImg2Pdf("D:\\111.pdf", "D:\\222.pdf", "D:\\dw.jpg");
-            fcc.addImage2Excel_byOffice("D:\\默认封面.xls", 0, "D:\\label2.bmp", "&[二维码]", 90, 90);
+            DocXAction dxa = new DocXAction();
+            //MergePDF mpf = new MergePDF();
 
+            bool inUse = true;
+
+            FileStream fs = null;
+            try
+            {
+
+                fs = new FileStream("D:\\TEST.xls", FileMode.Open, FileAccess.Read, FileShare.None);
+
+                inUse = false;
+            }
+            catch
+            {
+
+            }
+            finally
+            {
+                if (fs != null)
+
+                    fs.Close();
+            }
+             
+            
+
+            string s = "";
             #region
+
+            //cln.dealMergedAreaInPages_new("D:\\TEST.xls", 0);
+            //string filePath = "D:\\TEST.xls";
+            //IWorkbook wb = cln.loadExcelWorkbookI(filePath);
+            //ISheet sheet = wb.GetSheetAt(0);
+            //sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(36, 36, 5, 6));
+            //cln.saveExcelWithoutAsk(filePath, wb);
+
+            //object[] oh = { "序号", "技术要求", "检测项目", "分析项", "实测值", "单位", "单项结论", "样品" };
+            //object[] o1 = { 1, ">20", "OO颜色颜色颜色颜色颜色颜色颜色颜色颜色颜色KK", "OO颜色颜色颜色颜色颜色颜色颜色颜色颜色颜色KK", 2.20, "cm", "合格", "001" };
+            //object[] o2 = { 2, ">10", "外观色差", "oo对比度对比度对比度对比度对比度对比度对kk", 2.20, "cm", "合格", "001" };
+            //object[] o3 = { 3, ">30", "CCCo", "10001001", 2.20, "cm*pasc/mg*L", "合格", "002" };
+            //object[] o4 = { 3, ">20", "CCCo", "2233", 2.20, "cm", "合格", "002" };
+            //object[] o = { oh, o1, o2, o3, o4, };
+            //object[] colListC = { "检测项目", "单位", "单项结论" };
+
+            //cln.reportOneDimDExcel("D:\\默认附页.xls", 0, "D:\\默认附页_new.xls", o, colListC, 9.75);
+            //cln.stretchLastRowHeight("D:\\默认附页_new.xls", 0);
 
             //FileConvertClass fcc = new FileConvertClass();
             //MergePDF mpf = new MergePDF();
