@@ -65,7 +65,7 @@ namespace nsLims_NPOI
             //首页x=   ,y=103
             int width = (int)PageSize.A4.Width - x;
             int height = (int)PageSize.A4.Height - y;
-            string str = string.Concat("共 ", pagenum.ToString(), " 页,第 ", nownum.ToString(), " 页");
+            string str = string.Concat("共 ", pagenum.ToString(), " 页 第 ", nownum.ToString(), " 页");
             pdfContentByte.SetTextMatrix((float)width, (float)height);
             pdfContentByte.ShowText(str);
             //width = (int)PageSize.A4.Width - 90;
@@ -525,7 +525,7 @@ namespace nsLims_NPOI
                     }
                     #endregion
 
-                    string waterMarkName = string.Concat("共 ", (total - 1).ToString(), " 页,第 ", (i - 1).ToString(), " 页");
+                    string waterMarkName = string.Concat("共 ", (total - 1).ToString(), " 页 第 ", (i - 1).ToString(), " 页");
                     content = pdfStamper.GetOverContent(i);//在内容上方加水印
                     //content = pdfStamper.GetUnderContent(i);//在内容下方加水印
                     //透明度,0为透明,1为完全不透明
@@ -633,7 +633,7 @@ namespace nsLims_NPOI
                     }
                     #endregion
 
-                    string waterMarkName = string.Concat("共 ", (total - syIndex + 1).ToString(), " 页,第 ", (i - syIndex + 1).ToString(), " 页");
+                    string waterMarkName = string.Concat("共 ", (total - syIndex + 1).ToString(), " 页 第 ", (i - syIndex + 1).ToString(), " 页");
                     content = pdfStamper.GetOverContent(i);//在内容上方加水印
                     //content = pdfStamper.GetUnderContent(i);//在内容下方加水印
                     //透明度,0为透明,1为完全不透明
@@ -725,7 +725,7 @@ namespace nsLims_NPOI
 
                     #endregion
 
-                    string waterMarkName = string.Concat("共 ", (total - pageIndex + 1).ToString(), " 页,第 ", (i - pageIndex + 1).ToString(), " 页");
+                    string waterMarkName = string.Concat("共 ", (total - pageIndex + 1).ToString(), " 页 第 ", (i - pageIndex + 1).ToString(), " 页");
                     content = pdfStamper.GetOverContent(i);//在内容上方加水印
                     //content = pdfStamper.GetUnderContent(i);//在内容下方加水印
                     //透明度,0为透明,1为完全不透明

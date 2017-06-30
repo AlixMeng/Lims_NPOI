@@ -182,16 +182,14 @@ namespace nsLims_NPOI
                     continue;
                 else if (i == startPageIndex)//首页
                 {
-                    string label = "共 " + (doc.Pages.Count - startPageIndex).ToString() + " 页,第 1 页";
+                    string label = "共 " + (doc.Pages.Count - startPageIndex).ToString() + " 页 第 1 页";
                     x = page.Canvas.ClientSize.Width - 40;
                     y = 120.8f;
                     AlignText(page, label, x, y);
                 }
                 else if (i > 1)//附页
                 {
-                    string label = "共 " + (doc.Pages.Count - startPageIndex).ToString() + " 页,第 " + (i - startPageIndex
-
-+ 1).ToString() + " 页";
+                    string label = "共 " + (doc.Pages.Count - startPageIndex).ToString() + " 页 第 " + (i - startPageIndex + 1).ToString() + " 页";
                     AlignText(page, label, page.Canvas.ClientSize.Width - 40, 110f);
                 }
             }
