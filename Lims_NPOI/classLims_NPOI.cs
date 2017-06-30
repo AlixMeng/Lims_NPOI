@@ -31,6 +31,10 @@ namespace nsLims_NPOI
         private static double CM_POUND = 28.346456692913389;
         //A4纸的像素宽度为84.5,,倍数为278
         private static double PAGE_WIDTH = 84.5;
+
+        //最后一页的起始行号
+        public int lastPageFirstRow = -1;
+
         //workbook
         private IWorkbook iWorkbook;
         public IWorkbook IWorkbook
@@ -752,7 +756,14 @@ namespace nsLims_NPOI
             try
             {
                 sheet.FitToPage = false;
+                //从最后一页开始计算行高
                 int fRow = endHeadRow + 1;
+                if(this.lastPageFirstRow>0)
+                {
+                    fRow = this.lastPageFirstRow;
+
+                }
+                
                 int lRow = sheet.LastRowNum;
 
                 double totalH = 0; //总行高
@@ -842,7 +853,7 @@ namespace nsLims_NPOI
                         {
                             if (IsNewPageRow(sheet, i))
                             {
-                                sheet.SetRowBreak(i - 1);
+                                //sheet.SetRowBreak(i - 1);
                             }
                             totalH = tempH;
                             continue;
@@ -4036,9 +4047,12 @@ namespace nsLims_NPOI
                 for (int i = 0; i < colseq.Length; i++) {
                     colseq[i]++;
                 }
-                //classExcelMthd cem = new classExcelMthd();
-                new classExcelMthd().reportOneDimDExcelFormat(targetPath, sheetIndex+1, colseq, row+1, row + dic.Count+1, updHeight, colRange[0]+1, colRange[1]+1);
+                classExcelMthd cem = new classExcelMthd();
+                cem.reportOneDimDExcelFormat(targetPath, sheetIndex+1, colseq, row+1, row + dic.Count+1, updHeight, colRange[0]+1, colRange[1]+1);
 
+                //拉伸最后一行"以下空白"子样
+                this.lastPageFirstRow = cem.lastPageFirstRow - 1;
+                stretchLastRowHeight(targetPath, sheetIndex);
                 return true;
             }
             catch (Exception ex)

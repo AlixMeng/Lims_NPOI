@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using wsdlLib;
+using EXCEL = Microsoft.Office.Interop.Excel;
 
 namespace nsLims_NPOI
 {
@@ -28,36 +30,86 @@ namespace nsLims_NPOI
 
             //classLims_NPOI cln = new classLims_NPOI();
             //ConvertbyPrinter cbp = new ConvertbyPrinter();
-            //classExcelMthd cem = new classExcelMthd();
+            classExcelMthd cem = new classExcelMthd();
             //ImgConvert ic = new ImgConvert();
-            DocXAction dxa = new DocXAction();
+            //DocXAction dxa = new DocXAction();
             //MergePDF mpf = new MergePDF();
 
-            bool inUse = true;
-
-            FileStream fs = null;
+            object missing = Type.Missing;
+            EXCEL.ApplicationClass excel = null;
+            EXCEL.Workbook wb = null;
+            EXCEL.Workbooks workBooks = null;
             try
             {
+                excel = new EXCEL.ApplicationClass();
+                workBooks = excel.Workbooks;
+                wb = workBooks.Open("D:\\读取行高.xlsx", missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing);
+                //cem.dealMergedAreaInPages_new(wb, 1, 39, 8);
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[1];
+                for (int i = 1; i <= 2; i++)
+                {
+                    EXCEL.Range row = (EXCEL.Range)sheet.Rows[i];
+                    if (row == null) continue;
 
-                fs = new FileStream("D:\\TEST.xls", FileMode.Open, FileAccess.Read, FileShare.None);
-
-                inUse = false;
+                    double tempH;
+                    if ((bool)((EXCEL.Range)sheet.Rows[i]).Hidden == true)
+                    {
+                        tempH = 0;
+                    }
+                    else
+                    {
+                        tempH = (double)((EXCEL.Range)sheet.Rows[i]).Height;
+                    }
+                }
+                wb.SaveAs("D:\\读取行高_new.xls", EXCEL.XlFileFormat.xlExcel8, null, null, false, false, EXCEL.XlSaveAsAccessMode.xlNoChange, null, null, null, null, null);
             }
-            catch
+            catch (Exception ex)
             {
-
+                classLims_NPOI.WriteLog(ex, "");
             }
             finally
             {
-                if (fs != null)
+                if (wb != null)
+                {
+                    //wb.Close(false, missing, false);
+                    wb.Close(false, missing, missing);
+                    int i = Marshal.ReleaseComObject(wb);
+                    wb = null;
+                }
+                if (workBooks != null)
+                {
+                    workBooks.Close();
+                    int i = Marshal.ReleaseComObject(workBooks);
+                    workBooks = null;
+                }
+                if (excel != null)
+                {
+                    excel.Quit();
+                    int i = Marshal.ReleaseComObject(excel);
+                    excel = null;
+                }
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
 
-                    fs.Close();
             }
-             
-            
+
 
             string s = "";
             #region
+
+            //mpf.addPagenoToOnePage("D:\\sSyFy.pdf", "D:\\waterpdf.pdf", 550, 727, 1);
+            //dxa.InsertPicture("D:\\Jl5020102.docx", "&[评定人]", "D:\\dd.jpg", "RIGHT", 40.0, 100.0);
+            //mpf.replaceOnePage("D:\\TEST_final.pdf", 3, "D:\\默认首页.pdf", "D:\\replacedPdf.pdf");
+            //cem.addImage2Excel_byOffice("D:\\默认首页.xls", 0, "D:\\ding.du.png", "&{主检}", 63, 21);
+            //mpf.GetOnepage("D:\\TEST_final.pdf", 3, "D:\\TEST_0000.pdf");
+            //ic.addImage2Pdf_path("D:\\TEST_0000.pdf", "D:\\TEST_111_signed.pdf", "&{主检}", "D:\\ding.du.png", (float)63.0, (float)21.0);
+            //ic.addIssueDateToPdf("D:\\TEST_final.pdf", "D:\\TEST_0000.pdf", "签发日期：", "2017-06-18");
+            //mpf.InsertPageToPdf("D:\\TEST2.pdf", 2, "D:\\reportNull.pdf", 1, "D:\\TEST3.pdf");
+            //mpf.MergeAttachments("D:\\TEST_A - 副本.pdf,D:\\TEST_A.pdf", "D:\\TEST_merge22.pdf");
+
 
             //cln.dealMergedAreaInPages_new("D:\\TEST.xls", 0);
             //string filePath = "D:\\TEST.xls";
@@ -177,4 +229,4 @@ namespace nsLims_NPOI
 
 
     }
-}
+}     

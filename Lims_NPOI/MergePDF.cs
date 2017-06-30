@@ -76,6 +76,105 @@ namespace nsLims_NPOI
             pdfContentByte.Stroke();
         }
 
+        //将一个pdf的某一页插入另一个pdf的指定位置,位置索引从1开始
+        /// <summary>
+        /// 将一个pdf的某一页插入另一个pdf的指定位置,位置索引从1开始
+        /// </summary>
+        /// <param name="oPdf">被插入的pdf</param>
+        /// <param name="oIndex">插入位置,从1开始</param>
+        /// <param name="iPdf">要插入的pdf</param>
+        /// <param name="iIndex">要插入的页索引</param>
+        /// <param name="outPdf">输出pdf路径</param>
+        /// <returns></returns>
+        public bool InsertPageToPdf(string oPdf, int oIndex, string iPdf, int iIndex, string outPdf)
+        {
+
+            bool flag = false;
+            if (outPdf.Length == 0)
+            {
+                flag = false;
+                throw new Exception("合并后的文件名不能为空。");
+            }
+            if (!File.Exists(oPdf))
+            {
+                flag = false;
+                throw new Exception("被插入pdf文件不存在。");
+            }
+            if (!File.Exists(iPdf))
+            {
+                flag = false;
+                throw new Exception("要插入pdf的文件不存在。");
+            }
+            if (File.Exists(outPdf))
+            {
+                File.Delete(outPdf);
+            }
+
+            //设置页面大小
+            Rectangle rectangle = new Rectangle(620.25f, 876.75f);
+            //创建pdf文档大小
+            Document document = new Document(rectangle, 5f, 5f, 10f, 10f);
+            try
+            {
+                try
+                {
+                    PdfWriter instance = PdfWriter.GetInstance(document, new FileStream(outPdf, FileMode.Create));
+                    document.Open();
+                    PdfContentByte directContent = instance.DirectContent;
+                    
+                    //计算被插入的pdf页数
+                    PdfReader oReader = new PdfReader(oPdf);
+                    int oNumberOfPages = oReader.NumberOfPages;
+                    for (int i = 1; i < oNumberOfPages + 2; i++)
+                    {
+                        //如果不等,则直接复制oPdf的当前页
+                        if(i != oIndex)
+                        {
+                            document.NewPage();
+                            if ((int)oReader.GetPageContent(i).Length > 0)
+                            {
+                                directContent.AddTemplate(instance.GetImportedPage(oReader, i), 0f, 0f);
+                            }
+                        }
+                        //如果相等,则将要插入的pdf也插入指定位置
+                        else
+                        {
+                            PdfReader iReader = new PdfReader(iPdf);
+                            if ((int)iReader.GetPageContent(iIndex).Length > 0)
+                            {
+                                document.NewPage();
+                                directContent.AddTemplate(instance.GetImportedPage(iReader, iIndex), 0f, 0f);
+                                //break;
+                                //插入pdf页后,改变索引以跳过此页
+                                oNumberOfPages--;
+                                oIndex--;
+                                i--;                                
+                            }
+                        }
+
+                    }
+                    flag = true;
+                }
+                catch (Exception exception)
+                {
+                    throw exception;
+                }
+            }
+            finally
+            {
+                if (document != null)
+                {
+                    if (document.IsOpen())
+                    {
+                        document.Close();
+                    }
+                    document = null;
+                }
+            }
+            return flag;
+
+        }
+
         /// <summary>
         /// 指定长宽的签名
         /// </summary>
@@ -178,6 +277,77 @@ namespace nsLims_NPOI
                 float imgWidth = img.Width * scalePct;
                 float imgHeight = img.Height * scalePct;
                 img.SetAbsolutePosition((float)x - (imgWidth / 2), (float)y - (imgHeight / 2));//设置图片坐标
+
+                PdfContentByte content;
+                PdfGState gs = new PdfGState();
+                content = pdfStamper.GetOverContent(1);//在内容上方加水印,起始索引为1
+                //float f = content.GetEffectiveStringWidth("主检", true);
+                float f1 = content.XTLM;
+                float f2 = content.WordSpacing;
+                gs.FillOpacity = 1;//透明度,0为透明,1为完全不透明
+                content.SetGState(gs);
+                content.AddImage(img);
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return;
+            }
+            finally
+            {
+                if (pdfStamper != null)
+                    pdfStamper.Close();
+
+                if (pdfReader != null)
+                    pdfReader.Close();
+            }
+
+
+        }
+
+        /// <summary>
+        /// 资质章签名,固定在封面上方靠左
+        /// </summary>
+        /// <param name="inputfilepath"></param>
+        /// <param name="outputfilepath"></param>
+        /// <param name="imgPath"></param>
+        /// <param name="x">图片中心: X坐标</param>
+        /// <param name="y">图片中心:Y坐标</param>
+        /// <param name="scale">缩放大小, 不缩放为100</param>
+        public void addImageToPdf_Left(string inputfilepath, string outputfilepath, string imgPath, double x, double y, float scale)
+        {
+            PdfReader pdfReader = null;
+            PdfStamper pdfStamper = null;
+            if (inputfilepath == outputfilepath)
+            {
+                classLims_NPOI.WriteLog("输入pdf文件和输出pdf文件不能相同", "");
+                return;
+            }
+            if (File.Exists(outputfilepath))
+            {
+                File.Delete(outputfilepath);
+            }
+            try
+            {
+                pdfReader = new PdfReader(inputfilepath);
+                pdfStamper = new PdfStamper(pdfReader, new FileStream(outputfilepath, FileMode.Create));
+
+                int total = pdfReader.NumberOfPages;
+                Image img = Image.GetInstance(imgPath);
+                if (img.DpiX != img.DpiY)
+                {
+                    classLims_NPOI.WriteLog("图片文件横向纵向分辨率不同,无法处理", "");
+                    return;
+                }
+                var Alignment = Image.ALIGN_LEFT;
+                img.Alignment = Alignment;
+                //300 dpi的图片需要缩放到72 dpi对应的尺寸, 缩放倍数为24%
+                float scalePct = 72f / img.DpiX;
+                img.ScalePercent(scalePct * scale);
+                //img.Height = img.Height * 0.24f;
+                float imgWidth = img.Width * scalePct;
+                float imgHeight = img.Height * scalePct;
+                img.SetAbsolutePosition((float)x, (float)y);//设置图片坐标,靠左
 
                 PdfContentByte content;
                 PdfGState gs = new PdfGState();
@@ -390,6 +560,114 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
+        /// 添加普通偏转角度文字水印,指定了首页位置, 起始页码
+        /// </summary>
+        /// <param name="inputfilepath">输入pdf路径</param>
+        /// <param name="outputfilepath">输出pdf路径</param>
+        /// <param name="SY_X">首页页码x坐标,小于0时使用默认</param>
+        /// <param name="SY_Y">首页页码y坐标,小于0时使用默认</param>
+        /// <param name="FY_X">附页页码x坐标,小于0时使用默认</param>
+        /// <param name="FY_Y">附页页码y坐标,小于0时使用默认</param>
+        /// <param name="syIndex">首页索引</param>
+        public void setPagesWatermark(string inputfilepath, string outputfilepath, float SY_X, float SY_Y, float FY_X, float FY_Y,
+            int syIndex)
+        {
+            PdfReader pdfReader = null;
+            PdfStamper pdfStamper = null;
+            if (inputfilepath == outputfilepath)
+            {
+                classLims_NPOI.WriteLog("输入pdf文件和输出pdf文件不能相同", "");
+                return;
+            }
+            if (File.Exists(outputfilepath))
+            {
+                File.Delete(outputfilepath);
+            }
+            try
+            {
+                pdfReader = new PdfReader(inputfilepath);
+                pdfStamper = new PdfStamper(pdfReader, new FileStream(outputfilepath, FileMode.Create));
+                int total = pdfReader.NumberOfPages;
+                iTextSharp.text.Rectangle psize = pdfReader.GetPageSize(1);
+                float width = psize.Width;
+                float height = psize.Height;
+                PdfContentByte content;
+                BaseFont font = BaseFont.CreateFont("C:\\WINDOWS\\Fonts\\simsun.ttc,1", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                PdfGState gs = new PdfGState();
+                //首页x=40, y=125
+                //附页x=40, y=103
+                for (int i = syIndex; i <= total; i++)
+                {
+                    #region 处理页数和页码坐标
+                    if (i< syIndex)
+                    {
+                        continue;
+                    }
+                    else if (i == syIndex)
+                    {
+                        if (SY_X < 0 || SY_Y < 0)
+                        {
+                            width = (int)PageSize.A4.Width - 40;
+                            height = (int)PageSize.A4.Height - 128;
+                        }
+                        else
+                        {
+                            width = SY_X;
+                            height = SY_Y;
+                        }
+
+                    }
+                    else if (i > syIndex)
+                    {
+                        if (FY_X < 0 || FY_Y < 0)
+                        {
+                            width = (int)PageSize.A4.Width - 54;
+                            height = (int)PageSize.A4.Height - 113;
+                        }
+                        else
+                        {
+                            width = FY_X;
+                            height = FY_Y;
+                        }
+
+                    }
+                    #endregion
+
+                    string waterMarkName = string.Concat("共 ", (total - syIndex + 1).ToString(), " 页,第 ", (i - syIndex + 1).ToString(), " 页");
+                    content = pdfStamper.GetOverContent(i);//在内容上方加水印
+                    //content = pdfStamper.GetUnderContent(i);//在内容下方加水印
+                    //透明度,0为透明,1为完全不透明
+                    gs.FillOpacity = 1;
+                    content.SetGState(gs);
+                    //content.SetGrayFill(0.3f);
+                    //开始写入文本
+                    content.BeginText();
+                    content.SetColorFill(Color.BLACK);
+                    content.SetFontAndSize(font, 10f);
+                    content.SetTextMatrix(0, 0);
+                    content.ShowTextAligned(Element.ALIGN_RIGHT, waterMarkName, width, height, 0);
+                    //content.SetColorFill(BaseColor.BLACK);
+                    //content.SetFontAndSize(font, 8);
+                    //content.ShowTextAligned(Element.ALIGN_CENTER, waterMarkName, 0, 0, 0);
+                    content.EndText();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+
+                if (pdfStamper != null)
+                    pdfStamper.Close();
+
+                if (pdfReader != null)
+                    pdfReader.Close();
+            }
+        }
+
+        /// <summary>
         /// 添加页码到指定页
         /// </summary>
         /// <param name="inputfilepath">输入pdf路径</param>
@@ -430,7 +708,7 @@ namespace nsLims_NPOI
                     {
                         continue;
                     }
-                    else if (i == 2)
+                    else if (i == pageIndex)
                     {
                         if (X < 0 || Y < 0)
                         {
@@ -447,7 +725,7 @@ namespace nsLims_NPOI
 
                     #endregion
 
-                    string waterMarkName = string.Concat("共 ", (total - 1).ToString(), " 页,第 ", (i - 1).ToString(), " 页");
+                    string waterMarkName = string.Concat("共 ", (total - pageIndex + 1).ToString(), " 页,第 ", (i - pageIndex + 1).ToString(), " 页");
                     content = pdfStamper.GetOverContent(i);//在内容上方加水印
                     //content = pdfStamper.GetUnderContent(i);//在内容下方加水印
                     //透明度,0为透明,1为完全不透明
@@ -482,7 +760,7 @@ namespace nsLims_NPOI
         }
 
 
-        private Font GetFont(string strFont)
+        public Font GetFont(string strFont)
         {
             Font font;
             FontFactory.Register("C:\\Windows\\Fonts\\simsun.ttc");
@@ -523,7 +801,107 @@ namespace nsLims_NPOI
             return font;
         }
 
-        private int GetPageCount(string[] fileList)
+        //获取pdf指定页码的新pdf, 默认是第三页
+        public string GetOnepage(string oldPdf, int pageIndex, string newPage)
+        {
+            try
+            {
+                if (!(File.Exists(oldPdf)))
+                {
+                    throw new Exception("要提取的文件不存在。");
+                }
+                if (File.Exists(newPage))
+                {
+                    File.Delete(newPage);
+                }
+                //创建新的pdf
+                Rectangle rectangle = new Rectangle(620.25f, 876.75f);
+                Document document = new Document(rectangle, 5f, 5f, 10f, 10f);
+                PdfWriter instance = PdfWriter.GetInstance(document, new FileStream(newPage, FileMode.Create));
+
+                //加载pdf并遍历页
+                PdfReader pdfReader = new PdfReader(oldPdf);
+                int numberOfPages = pdfReader.NumberOfPages;
+                document.Open();
+                PdfContentByte directContent = instance.DirectContent;
+                for (int j = 1; j <= numberOfPages; j++)
+                {
+                    
+                    if (j==pageIndex && (int)pdfReader.GetPageContent(j).Length > 0)
+                    {
+                        document.NewPage();
+                        directContent.AddTemplate(instance.GetImportedPage(pdfReader, j), 0f, 0f);
+                        break;
+                    }
+                }
+                document.Close();
+                return newPage;
+            }
+            catch (Exception exception1)
+            {
+                Exception exception = exception1;
+                Console.Error.WriteLine(exception.Message);
+                Console.Error.WriteLine(exception.StackTrace);
+            }
+            return "";
+        }
+
+        //替换pdf的其中一页
+        public string replaceOnePage(string oldPdf, int oldIndex, string onePage, string newPdf)
+        {
+            try
+            {
+                if (!(File.Exists(oldPdf)))
+                {
+                    throw new Exception("要处理的文件不存在。");
+                }
+                if (!(File.Exists(onePage)))
+                {
+                    throw new Exception("要插入的pdf不存在。");
+                }
+                if (File.Exists(newPdf))
+                {
+                    File.Delete(newPdf);
+                }
+                //创建新的pdf
+                Rectangle rectangle = new Rectangle(620.25f, 876.75f);
+                Document document = new Document(rectangle, 5f, 5f, 10f, 10f);
+                PdfWriter instance = PdfWriter.GetInstance(document, new FileStream(newPdf, FileMode.Create));
+
+                //加载pdf并遍历页
+                PdfReader pdfReader = new PdfReader(oldPdf);
+                int numberOfPages = pdfReader.NumberOfPages;
+                document.Open();
+                PdfContentByte directContent = instance.DirectContent;
+                for (int j = 1; j <= numberOfPages; j++)
+                {
+
+                    if (j != oldIndex && (int)pdfReader.GetPageContent(j).Length > 0)
+                    {
+                        document.NewPage();
+                        directContent.AddTemplate(instance.GetImportedPage(pdfReader, j), 0f, 0f);
+                    }
+                    else if (j == oldIndex && (int)pdfReader.GetPageContent(j).Length > 0)
+                    {
+                        //加载新的pdf并提取第一页
+                        PdfReader onePdfPage = new PdfReader(onePage);
+                        document.NewPage();
+                        directContent.AddTemplate(instance.GetImportedPage(onePdfPage, 1), 0f, 0f);
+                    }
+                }
+                document.Close();
+                return newPdf;
+            }
+            catch (Exception exception1)
+            {
+                Exception exception = exception1;
+                Console.Error.WriteLine(exception.Message);
+                Console.Error.WriteLine(exception.StackTrace);
+            }
+            return "";
+        }
+
+        public int GetPageCount(string[] fileList)
         {
             int numberOfPages = 0;
             try
@@ -535,6 +913,27 @@ namespace nsLims_NPOI
                     PdfReader pdfReader = new PdfReader(fileList[i]);
                     numberOfPages = numberOfPages + pdfReader.NumberOfPages;
                 }
+                document.Close();
+            }
+            catch (Exception exception1)
+            {
+                Exception exception = exception1;
+                Console.Error.WriteLine(exception.Message);
+                Console.Error.WriteLine(exception.StackTrace);
+            }
+            return numberOfPages;
+        }
+
+        public int GetPageCount(string fileList)
+        {
+            int numberOfPages = 0;
+            try
+            {
+                Document document = new Document();
+                document.Open();
+                PdfReader pdfReader = new PdfReader(fileList);
+                numberOfPages = numberOfPages + pdfReader.NumberOfPages;
+                
                 document.Close();
             }
             catch (Exception exception1)

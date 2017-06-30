@@ -128,46 +128,18 @@ namespace nsLims_NPOI
                     }
 
                     excel = new EXCEL.ApplicationClass();
-                    //excel.GetType();
                     workBooks = excel.Workbooks;
                     Type type = workBooks.GetType();
-                    //object obj = fromExcelPath;
-                    //object[] objArray = new object[] { obj, true, true };
                     workBook = workBooks.Open(fromExcelPath, missing, true,
                             missing, missing, missing, missing, missing,
                             missing, missing, missing, missing, missing,
                             missing, missing);
-                    //EXCEL.Workbook workbook = (EXCEL.Workbook)type.InvokeMember("Open", BindingFlags.InvokeMethod,
-                    //    null, workbooks, objArray);
 
                     workBook.ExportAsFixedFormat(
                         EXCEL.XlFixedFormatType.xlTypePDF,
                         toPath,
                         EXCEL.XlFixedFormatQuality.xlQualityStandard, false, true, Type.Missing, Type.Missing, false, Type.Missing);
-
-                    //if (workbook != null)
-                    //{
-                    //    workbook.Close(false, Type.Missing, Type.Missing);
-                    //    System.Runtime.InteropServices.Marshal.ReleaseComObject(workbook);
-                    //    //Marshal.FinalReleaseComObject(workBook);
-                    //    workbook = null;
-                    //}
-                    //if (workbooks != null)
-                    //{
-                    //    workbooks.Close();
-                    //    System.Runtime.InteropServices.Marshal.ReleaseComObject(workbooks);
-                    //    workbooks = null;
-                    //}
-                    //if (applicationClass != null)
-                    //{
-                    //    applicationClass.Quit();
-                    //    System.Runtime.InteropServices.Marshal.ReleaseComObject(applicationClass);
-                    //    applicationClass = null;
-
-                    //}
-
-                    //GC.Collect();
-                    //GC.WaitForPendingFinalizers();
+                    
                     flag = true;
                 }
                 catch (Exception exception)
@@ -337,8 +309,6 @@ namespace nsLims_NPOI
             }
             catch (Exception exception)
             {
-                classLims_NPOI.WriteLog("当前工作组:" + System.Environment.UserDomainName, "");
-                classLims_NPOI.WriteLog("当前用户名:" + System.Environment.UserName, "");
                 classLims_NPOI.WriteLog(exception, "");
                 flag = false;
             }

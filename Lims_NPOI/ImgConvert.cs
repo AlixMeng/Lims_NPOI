@@ -218,10 +218,21 @@ namespace nsLims_NPOI
 
                 PdfPageBase page = null;
                 PdfTextFind[] result = null;
-                for (int i = 0; i < doc.Pages.Count; i++)
+                for (int i = 2; i < doc.Pages.Count; i++)
                 {
                     page = doc.Pages[i];
-                    result = page.FindText(flagTxt).Finds;
+                    try
+                    {
+                        //pdfTextFindCollection = page.FindText(flagTxt);
+                        //pdfTextFindCollection = page.ExecuteCommandFindText(flagTxt);
+                        PdfTextFindCollection pdfTextFindCollection = page.FindText(flagTxt);
+                        result = pdfTextFindCollection.Finds;
+                    }catch(Exception ex)
+                    {
+                        classLims_NPOI.WriteLog("查询标记字符串时出错,可能是文件损坏或编码格式错误!\n"
+                            +ex.ToString(), "");
+                        continue;
+                    }
                     if (result.Length > 0)
                     {
                         break;
@@ -274,7 +285,13 @@ namespace nsLims_NPOI
                 for (int i = 0; i < doc.Pages.Count; i++)
                 {
                     page = doc.Pages[i];
-                    result = page.FindText(flagTxt).Finds;
+                    PdfTextFindCollection pdfTextFindCollection = null;
+                    //pdfTextFindCollection = page.FindText(flagTxt);
+                    //pdfTextFindCollection = page.ExecuteCommandFindText(flagTxt);
+                    pdfTextFindCollection = page.FindText(flagTxt);
+                    if (pdfTextFindCollection == null)
+                        continue;
+                    result = pdfTextFindCollection.Finds;
                     if (result.Length > 0)
                     {
                         break;

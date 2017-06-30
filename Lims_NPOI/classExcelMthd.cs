@@ -21,6 +21,8 @@ namespace nsLims_NPOI
         //820.25, 首页为14.25pound时843.25, 首页为14.25pound时 833.75
         //手动设置的测试总高,使用不同字体会有不同的总高度,此处使用宋体10号字体
         private static double PAGE_HEIGHT = 820.15;
+        //最后一页的起始行号
+        public int lastPageFirstRow;
 
         public classExcelMthd()
         {
@@ -59,13 +61,15 @@ namespace nsLims_NPOI
             var newShape = shapes.AddPicture(imagePath, Microsoft.Office.Core.MsoTriState.msoFalse,
                 Microsoft.Office.Core.MsoTriState.msoTrue, PicLeft, PicTop, (float)PicWidth, (float)PicHeight);
 
-            string newGUID = System.Guid.NewGuid().ToString();
-            string strTargetFile = workbookPath.Substring(0, workbookPath.LastIndexOf("\\") + 1)
-                + newGUID
-                + workbookPath.Substring(workbookPath.LastIndexOf("."));
-            wb.SaveAs(strTargetFile, wb.FileFormat, missing, missing, missing, missing, EXCEL.XlSaveAsAccessMode.xlNoChange,
-                missing, missing, missing, missing, missing);
-            return strTargetFile;
+            wb.Save();
+            return workbookPath;
+            //string newGUID = System.Guid.NewGuid().ToString();
+            //string strTargetFile = workbookPath.Substring(0, workbookPath.LastIndexOf("\\") + 1)
+            //    + newGUID
+            //    + workbookPath.Substring(workbookPath.LastIndexOf("."));
+            //wb.SaveAs(strTargetFile, wb.FileFormat, missing, missing, missing, missing, EXCEL.XlSaveAsAccessMode.xlNoChange,
+            //    missing, missing, missing, missing, missing);
+            //return strTargetFile;
         }
 
 
@@ -105,7 +109,7 @@ namespace nsLims_NPOI
                     missing, missing);
                 //实例化Sheet后,释放Excel进程就会失败
                 //对于sheet的操作必须放在新的方法中,接口层级为Workbook
-                strTargetFile = addImageToSheet(workbookPath, wb, sheetIndex, rangeName, imagePath, imgFlag, PicWidth, PicHeight);
+                strTargetFile = addImageToSheet(workbookPath, wb, sheetIndex+1, rangeName, imagePath, imgFlag, PicWidth, PicHeight);
 
             }
             catch (Exception ex)
@@ -138,21 +142,87 @@ namespace nsLims_NPOI
                 GC.WaitForPendingFinalizers();
 
             }
-            string strOldFileName = workbookPath.Substring(workbookPath.LastIndexOf("\\") + 1,
-                workbookPath.Length - workbookPath.LastIndexOf("\\") - 1);
-            if (File.Exists(strTargetFile))
-            {
-                File.Delete(workbookPath);
-                Computer MyComputer = new Computer();
-                MyComputer.FileSystem.RenameFile(strTargetFile, strOldFileName);
-                flag = true;
-            }
-            else
-            {
-                flag = false;
-            }
+            //string strOldFileName = workbookPath.Substring(workbookPath.LastIndexOf("\\") + 1,
+            //    workbookPath.Length - workbookPath.LastIndexOf("\\") - 1);
+            //if (File.Exists(strTargetFile))
+            //{
+            //    File.Delete(workbookPath);
+            //    Computer MyComputer = new Computer();
+            //    MyComputer.FileSystem.RenameFile(strTargetFile, strOldFileName);
+            //    flag = true;
+            //}
+            //else
+            //{
+            //    flag = false;
+            //}
             return flag;
 
+        }
+
+        public static bool createNew03Excel(string strSourceFile)
+        {
+            bool flag = true;
+            if(true)
+            {
+                if (File.Exists(strSourceFile))
+                {
+                    File.Delete(strSourceFile);
+                }
+                var Ext = strSourceFile.Substring(strSourceFile.LastIndexOf("."));
+                if (Ext.ToUpper() != ".XLS")
+                {
+                    //throw new Exception("文件格式不符合要求!");
+                    classLims_NPOI.WriteLog("文件格式不符合要求!", "");
+                    flag = false;
+                    return flag;
+                }
+                object missing = Type.Missing;
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbook workBook = null;
+                EXCEL.Workbooks workBooks = null;
+                try
+                {
+                    excel = new EXCEL.ApplicationClass();
+                    workBooks = excel.Workbooks;
+                    workBook = workBooks.Add(missing);
+                    workBook.SaveAs(strSourceFile, EXCEL.XlFileFormat.xlExcel8, null, null, false, false, EXCEL.XlSaveAsAccessMode.xlNoChange, null, null, null, null, null);
+                }
+                catch (Exception ex)
+                {
+                    classLims_NPOI.WriteLog(ex, "");
+                    flag = false;
+                }
+                finally
+                {
+                    if (workBook != null)
+                    {
+                        workBook.Close(false, missing, missing);
+                        Marshal.ReleaseComObject(workBook);
+                        //Marshal.FinalReleaseComObject(workBook);
+                        workBook = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        Marshal.ReleaseComObject(workBooks);
+                        workBook = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        Marshal.ReleaseComObject(excel);
+                        //Marshal.FinalReleaseComObject(excel);
+                        excel = null;
+
+                        //flag = KillSpecialExcel(excel);
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+
+                }
+            }
+            return flag;
         }
 
         /// <summary>
@@ -162,39 +232,65 @@ namespace nsLims_NPOI
         /// <param name="sheetIndex"></param>
         public void dealMergedAreaInPages_new(EXCEL.Workbook wb, int sheetIndex, int endRow, int endCol)
         {
-            object missing = System.Reflection.Missing.Value;
-            EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
-
-            System.Drawing.Point p = selectPosition(sheet, "检测项目", endRow, endCol);
-            int testNoIndex = p.Y;
-            //列号取检测项目标题所在行的单元格数
-            //int maxColIndex = sheet.Range["IV" + testNoIndex].End[EXCEL.XlDirection.xlToLeft].Column;
-            int maxColIndex = endCol;
-
-            //获取每页第一行的索引
-            List<int> firstPageRowIndex = getNewPageFirstRow(sheet, endRow, endCol);
-
-            foreach (int i in firstPageRowIndex)
+            try
             {
+                object missing = System.Reflection.Missing.Value;
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
 
-                if (i <= endRow && i > p.X)
+                System.Drawing.Point p = selectPosition(sheet, "检测项目", endRow, endCol);
+                int testNoIndex = p.Y;
+                //列号取检测项目标题所在行的单元格数
+                //int maxColIndex = sheet.Range["IV" + testNoIndex].End[EXCEL.XlDirection.xlToLeft].Column;
+                int maxColIndex = endCol;
+
+                //获取每页第一行的索引
+                List<int> firstPageRowIndex = getNewPageFirstRow(sheet, endRow, endCol);
+                //记录下最后一页的起始行号,如果页数不超过一页,则应该返回表头下第一行行号
+                if (firstPageRowIndex.Count == 0)
                 {
-                    //如果检测项目相等,则拆分
-                    //EXCEL.Range cell = (EXCEL.Range)sheet.Cells[n, testNoIndex];
-                    //EXCEL.Range beforeCell = (EXCEL.Range)sheet.Cells[n-1, testNoIndex];
-                    string boforeCellValue = getMergerCellValue(sheet, i - 1, testNoIndex);
-                    string cellValue = getMergerCellValue(sheet, i, testNoIndex);
-                    if (boforeCellValue.Equals("") || cellValue.Equals(""))
+                    int[] iRange = getRepeatingRowsRange(sheet, endCol);
+                    if (iRange == null)
                     {
-                        ;
+                        this.lastPageFirstRow = 1;
                     }
-                    else if (boforeCellValue.Equals(cellValue))
+                    else
                     {
-                        dealMergedBetweenPages(sheet, i, maxColIndex);
+                        this.lastPageFirstRow = iRange[1] + 1;
                     }
                 }
+                else
+                {
+                    this.lastPageFirstRow = firstPageRowIndex[firstPageRowIndex.Count - 1];
+                }
 
+                foreach (int i in firstPageRowIndex)
+                {
 
+                    if (i <= endRow && i > p.X)
+                    {
+                        //如果检测项目相等,则拆分
+                        //EXCEL.Range cell = (EXCEL.Range)sheet.Cells[n, testNoIndex];
+                        //EXCEL.Range beforeCell = (EXCEL.Range)sheet.Cells[n-1, testNoIndex];
+                        string boforeCellValue = getMergerCellValue(sheet, i - 1, testNoIndex);
+                        string cellValue = getMergerCellValue(sheet, i, testNoIndex);
+                        if (boforeCellValue.Equals("") || cellValue.Equals(""))
+                        {
+                            ;
+                        }
+                        else if (boforeCellValue.Equals(cellValue))
+                        {
+                            dealMergedBetweenPages(sheet, i, maxColIndex);
+                        }
+                    }
+                    //插入分页符
+                    //((EXCEL.Range)sheet.Rows[20]).PageBreak = 1;
+
+                }
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return;
             }
         }
 
