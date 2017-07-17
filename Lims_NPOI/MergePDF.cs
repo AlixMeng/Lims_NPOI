@@ -452,6 +452,74 @@ namespace nsLims_NPOI
 
         }
 
+        //添加图片到pdf,指定坐标和长宽
+        /// <summary>
+        /// 添加图片到pdf,指定坐标和长宽
+        /// </summary>
+        /// <param name="inputfilepath">输入pdf路径</param>
+        /// <param name="outputfilepath">输出pdf路径</param>
+        /// <param name="imgPath">图片路径</param>
+        /// <param name="x">X坐标</param>
+        /// <param name="y">Y坐标</param>
+        /// <param name="dWidth">长数值,按像素</param>
+        /// <param name="dHeight">无用的图片高度,因为图片按宽度缩放并保留纵横比</param>
+        public void addImageToPdf(string inputfilepath, string outputfilepath, string imgPath, double x, double y, double dWidth, string dHeight)
+        {
+            PdfReader pdfReader = null;
+            PdfStamper pdfStamper = null;
+            if (inputfilepath == outputfilepath)
+            {
+                classLims_NPOI.WriteLog("输入pdf文件和输出pdf文件不能相同", "");
+                return;
+            }
+            if (File.Exists(outputfilepath))
+            {
+                File.Delete(outputfilepath);
+            }
+            try
+            {
+                pdfReader = new PdfReader(inputfilepath);
+                pdfStamper = new PdfStamper(pdfReader, new FileStream(outputfilepath, FileMode.Create));
+
+                int total = pdfReader.NumberOfPages;
+                Image img = Image.GetInstance(imgPath);
+
+                var Alignment = Image.ALIGN_LEFT;
+                img.Alignment = Alignment;
+                //设置缩放尺寸, 按照宽度计算百分比
+                float scalePct = (float)dWidth / img.Width;
+                img.ScalePercent(scalePct * 100);
+                //img.Height = img.Height * 0.24f;
+                float width = img.Width * scalePct;
+                float height = img.Height * scalePct;
+                img.SetAbsolutePosition((float)x, (float)y);//设置图片坐标
+
+                PdfContentByte content;
+                PdfGState gs = new PdfGState();
+                content = pdfStamper.GetOverContent(1);//在内容上方加水印,起始索引为1
+                float f1 = content.XTLM;
+                float f2 = content.WordSpacing;
+                gs.FillOpacity = 1;//透明度,0为透明,1为完全不透明
+                content.SetGState(gs);
+                content.AddImage(img);
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return;
+            }
+            finally
+            {
+                if (pdfStamper != null)
+                    pdfStamper.Close();
+
+                if (pdfReader != null)
+                    pdfReader.Close();
+            }
+
+
+        }
+
 
         /// <summary>
         /// 添加普通偏转角度文字水印
@@ -726,6 +794,99 @@ namespace nsLims_NPOI
                     #endregion
 
                     string waterMarkName = string.Concat("共 ", (total - pageIndex + 1).ToString(), " 页 第 ", (i - pageIndex + 1).ToString(), " 页");
+                    content = pdfStamper.GetOverContent(i);//在内容上方加水印
+                    //content = pdfStamper.GetUnderContent(i);//在内容下方加水印
+                    //透明度,0为透明,1为完全不透明
+                    gs.FillOpacity = 1;
+                    content.SetGState(gs);
+                    //content.SetGrayFill(0.3f);
+                    //开始写入文本
+                    content.BeginText();
+                    content.SetColorFill(Color.BLACK);
+                    content.SetFontAndSize(font, 10f);
+                    content.SetTextMatrix(0, 0);
+                    content.ShowTextAligned(Element.ALIGN_RIGHT, waterMarkName, width, height, 0);
+                    //content.SetColorFill(BaseColor.BLACK);
+                    //content.SetFontAndSize(font, 8);
+                    //content.ShowTextAligned(Element.ALIGN_CENTER, waterMarkName, 0, 0, 0);
+                    content.EndText();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+
+                if (pdfStamper != null)
+                    pdfStamper.Close();
+
+                if (pdfReader != null)
+                    pdfReader.Close();
+            }
+        }
+
+        /// <summary>
+        /// 添加页码到指定页
+        /// </summary>
+        /// <param name="inputfilepath">输入pdf路径</param>
+        /// <param name="outputfilepath">输出pdf路径</param>
+        /// <param name="X">首页页码x坐标,小于0时使用默认</param>
+        /// <param name="Y">首页页码y坐标,小于0时使用默认</param>
+        /// <param name="pageIndex">页码编号</param>
+        /// <param name="waterString">水印值</param>
+        public void addPagenoToSy(string inputfilepath, string outputfilepath, float X, float Y, int pageIndex, string waterString)
+        {
+            PdfReader pdfReader = null;
+            PdfStamper pdfStamper = null;
+            if (inputfilepath == outputfilepath)
+            {
+                classLims_NPOI.WriteLog("输入pdf文件和输出pdf文件不能相同", "");
+                return;
+            }
+            if (File.Exists(outputfilepath))
+            {
+                File.Delete(outputfilepath);
+            }
+            try
+            {
+                pdfReader = new PdfReader(inputfilepath);
+                pdfStamper = new PdfStamper(pdfReader, new FileStream(outputfilepath, FileMode.Create));
+                int total = pdfReader.NumberOfPages;
+                iTextSharp.text.Rectangle psize = pdfReader.GetPageSize(1);
+                float width = psize.Width;
+                float height = psize.Height;
+                PdfContentByte content;
+                BaseFont font = BaseFont.CreateFont("C:\\WINDOWS\\Fonts\\simsun.ttc,1", BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+                PdfGState gs = new PdfGState();
+                //首页x=40, y=125
+                //附页x=40, y=103
+                for (int i = 1; i <= total; i++)
+                {
+                    #region 处理页数和页码坐标
+                    if (i != pageIndex)
+                    {
+                        continue;
+                    }
+                    else if (i == pageIndex)
+                    {
+                        if (X < 0 || Y < 0)
+                        {
+                            width = (int)PageSize.A4.Width - 40;
+                            height = (int)PageSize.A4.Height - 128;
+                        }
+                        else
+                        {
+                            width = X;
+                            height = Y;
+                        }
+
+                    }
+
+                    #endregion
+
+                    string waterMarkName = waterString;
                     content = pdfStamper.GetOverContent(i);//在内容上方加水印
                     //content = pdfStamper.GetUnderContent(i);//在内容下方加水印
                     //透明度,0为透明,1为完全不透明

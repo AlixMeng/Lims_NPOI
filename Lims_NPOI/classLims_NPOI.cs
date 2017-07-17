@@ -676,252 +676,255 @@ namespace nsLims_NPOI
 
         }
 
-        /// <summary>
-        /// 拉伸表格到A4大小
-        /// </summary>
-        /// <param name="filePath">excel路径</param>
-        /// <param name="sheetIndex"></param>
-        /// <param name="startHeadRow">表头起始行号</param>
-        /// <param name="endHeadRow">表头结束行号</param>
-        /// <param name="startCol">起始列号</param>
-        /// <param name="endCol">结束列号</param>
-        /// <returns>是否成功</returns>
-        public bool stretchLastRowHeight(string filePath, int sheetIndex, int startHeadRow, int endHeadRow, int startCol, int endCol)
-        {
-            try
-            {
-                //NPOI自动换行后行高度取值不变,需要用COM组件重新保存
-                classExcelMthd.excelRefresh(filePath);
-                IWorkbook wb = loadExcelWorkbookI(filePath);
-                ISheet sheet = wb.GetSheetAt(sheetIndex);
-                int pc = stretchLastRowHeight(sheet, startHeadRow, endHeadRow, startCol, endCol);
-                saveExcelWithoutAsk(filePath, wb);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                WriteLog(ex, "");
-                return false;
-            }
-        }
+        #region 旧的拉伸尾行方法,不用
+        ///// <summary>
+        ///// 拉伸表格到A4大小
+        ///// </summary>
+        ///// <param name="filePath">excel路径</param>
+        ///// <param name="sheetIndex"></param>
+        ///// <param name="startHeadRow">表头起始行号</param>
+        ///// <param name="endHeadRow">表头结束行号</param>
+        ///// <param name="startCol">起始列号</param>
+        ///// <param name="endCol">结束列号</param>
+        ///// <returns>是否成功</returns>
+        //public bool stretchLastRowHeight(string filePath, int sheetIndex, int startHeadRow, int endHeadRow, int startCol, int endCol)
+        //{
+        //    try
+        //    {
+        //        //NPOI自动换行后行高度取值不变,需要用COM组件重新保存
+        //        classExcelMthd.excelRefresh(filePath);
+        //        IWorkbook wb = loadExcelWorkbookI(filePath);
+        //        ISheet sheet = wb.GetSheetAt(sheetIndex);
+        //        int pc = stretchLastRowHeight(sheet, startHeadRow, endHeadRow, startCol, endCol);
+        //        saveExcelWithoutAsk(filePath, wb);
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        WriteLog(ex, "");
+        //        return false;
+        //    }
+        //}
 
-        /// <summary>
-        /// 拉伸表格到A4大小
-        /// </summary>
-        /// <param name="filePath">excel路径</param>
-        /// <param name="sheetIndex"></param>
-        /// <returns>是否成功</returns>
-        public bool stretchLastRowHeight(string filePath, int sheetIndex)
-        {
-            try
-            {
-                //NPOI自动换行后行高度取值不变,需要用COM组件重新保存
-                //classExcelMthd.excelRefresh(filePath);
-                IWorkbook wb = loadExcelWorkbookI(filePath);
-                ISheet sheet = wb.GetSheetAt(sheetIndex);
+        ///// <summary>
+        ///// 拉伸表格到A4大小
+        ///// </summary>
+        ///// <param name="filePath">excel路径</param>
+        ///// <param name="sheetIndex"></param>
+        ///// <returns>是否成功</returns>
+        //public bool stretchLastRowHeight(string filePath, int sheetIndex)
+        //{
+        //    try
+        //    {
+        //        //NPOI自动换行后行高度取值不变,需要用COM组件重新保存
+        //        //classExcelMthd.excelRefresh(filePath);
+        //        IWorkbook wb = loadExcelWorkbookI(filePath);
+        //        ISheet sheet = wb.GetSheetAt(sheetIndex);
 
-                //拉伸末行
-                //先获取表头配置
-                int[] iRange = getRepeatingRowsRange(sheet);
-                if (iRange == null)
-                {
-                    stretchLastRowHeight(sheet, 0, -1, 0, getColumnRange(sheet)[1]);
-                }
-                else
-                {
-                    stretchLastRowHeight(sheet, iRange[0], iRange[1], iRange[2], iRange[3]);
-                }
+        //        //拉伸末行
+        //        //先获取表头配置
+        //        int[] iRange = getRepeatingRowsRange(sheet);
+        //        if (iRange == null)
+        //        {
+        //            stretchLastRowHeight(sheet, 0, -1, 0, getColumnRange(sheet)[1]);
+        //        }
+        //        else
+        //        {
+        //            stretchLastRowHeight(sheet, iRange[0], iRange[1], iRange[2], iRange[3]);
+        //        }
 
-                saveExcelWithoutAsk(filePath, wb);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                WriteLog(ex, "");
-                return false;
-            }
-        }
+        //        saveExcelWithoutAsk(filePath, wb);
+        //        return true;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        WriteLog(ex, "");
+        //        return false;
+        //    }
+        //}
 
-        /// <summary>
-        /// 拉伸最后一行,使占满A4纸,并返回总页数
-        /// </summary>
-        /// <param name="sheet"></param>
-        /// <param name="startHeadRow">表头起始行号</param>
-        /// <param name="endHeadRow">表头结束行号</param>
-        /// <param name="startCol">起始列号</param>
-        /// <param name="endCol">结束列号</param>
-        /// <returns>总页数</returns>
-        public int stretchLastRowHeight(ISheet sheet, int startHeadRow, int endHeadRow, int startCol, int endCol)
-        {
-            try
-            {
-                sheet.FitToPage = false;
-                //从最后一页开始计算行高
-                int fRow = endHeadRow + 1;
-                if(this.lastPageFirstRow>0)
-                {
-                    fRow = this.lastPageFirstRow;
+        ///// <summary>
+        ///// 拉伸最后一行,使占满A4纸,并返回总页数
+        ///// </summary>
+        ///// <param name="sheet"></param>
+        ///// <param name="startHeadRow">表头起始行号</param>
+        ///// <param name="endHeadRow">表头结束行号</param>
+        ///// <param name="startCol">起始列号</param>
+        ///// <param name="endCol">结束列号</param>
+        ///// <returns>总页数</returns>
+        //public int stretchLastRowHeight(ISheet sheet, int startHeadRow, int endHeadRow, int startCol, int endCol)
+        //{
+        //    try
+        //    {
+        //        sheet.FitToPage = false;
+        //        //从最后一页开始计算行高
+        //        int fRow = endHeadRow + 1;
+        //        if (this.lastPageFirstRow > 0)
+        //        {
+        //            fRow = this.lastPageFirstRow;
 
-                }
-                
-                int lRow = sheet.LastRowNum;
+        //        }
 
-                double totalH = 0; //总行高
-                int pageCount = 1; //页码计数
-                //高度换算 1厘米＝28.35个单位, 1个单位在NPOI中是20个单位
-                double headH = 0; //表头高度                
-                headH = (sheet.GetMargin(MarginType.TopMargin) + sheet.GetMargin(MarginType.BottomMargin)) / 0.39370078740157483;
-                headH = headH * CM_POUND * 20;
-                for (int i = startHeadRow; i <= endHeadRow; i++)
-                {
-                    if (sheet.GetRow(i).ZeroHeight == true)
-                    {
-                        headH += 0;
-                    }
-                    else
-                    {
-                        headH += sheet.GetRow(i).Height;
-                    }
-                }
+        //        int lRow = sheet.LastRowNum;
 
-                for (int i = fRow; i <= lRow; i++)
-                {
-                    IRow row = sheet.GetRow(i);
-                    if (row == null) continue;
+        //        double totalH = 0; //总行高
+        //        int pageCount = 1; //页码计数
+        //        //高度换算 1厘米＝28.35个单位, 1个单位在NPOI中是20个单位
+        //        double headH = 0; //表头高度                
+        //        headH = (sheet.GetMargin(MarginType.TopMargin) + sheet.GetMargin(MarginType.BottomMargin)) / 0.39370078740157483;
+        //        headH = headH * CM_POUND * 20;
+        //        for (int i = startHeadRow; i <= endHeadRow; i++)
+        //        {
+        //            if (sheet.GetRow(i).ZeroHeight == true)
+        //            {
+        //                headH += 0;
+        //            }
+        //            else
+        //            {
+        //                headH += sheet.GetRow(i).Height;
+        //            }
+        //        }
 
-                    double tempH;
-                    if (row.ZeroHeight == true)
-                    {
-                        tempH = 0;
-                    }
-                    else
-                    {
-                        tempH = row.Height;
-                    }
-                    if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
-                    {
-                        pageCount++;
-                        if (i == lRow)//已经最后一行
-                        {
-                            short shH = (short)(PAGE_HEIGHT - totalH - (1 * headH));
-                            if (shH > 409 * 20)//最高只能设置一行为409
-                            {
-                                //sheet.ShiftRows(i + 1,                                 //--开始行
-                                //    i + 1,                            //--结束行
-                                //    1,                             //--移动大小(行数)--往下移动
-                                //    true,                                   //是否复制行高
-                                //    false,                                  //是否重置行高
-                                //    true                                    //是否移动批注
-                                //    );
-                                IRow newRow = sheet.CreateRow(i + 1);//先新增一行
-                                ICell sourceCell = null;
-                                ICell targetCell = null;
-                                //复制格式到新的行
-                                for (int m = row.FirstCellNum; m < row.LastCellNum; m++)
-                                {
-                                    sourceCell = row.GetCell(m);
-                                    if (sourceCell == null)
-                                        continue;
-                                    targetCell = newRow.CreateCell(m);
-                                    targetCell.CellStyle = sourceCell.CellStyle;
-                                    targetCell.SetCellType(sourceCell.CellType);
+        //        for (int i = fRow; i <= lRow; i++)
+        //        {
+        //            IRow row = sheet.GetRow(i);
+        //            if (row == null) continue;
 
-                                }
-                                row.Height = 409 * 20;
+        //            double tempH;
+        //            if (row.ZeroHeight == true)
+        //            {
+        //                tempH = 0;
+        //            }
+        //            else
+        //            {
+        //                tempH = row.Height;
+        //            }
+        //            if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
+        //            {
+        //                pageCount++;
+        //                if (i == lRow)//已经最后一行
+        //                {
+        //                    short shH = (short)(PAGE_HEIGHT - totalH - (1 * headH));
+        //                    if (shH > 409 * 20)//最高只能设置一行为409
+        //                    {
+        //                        //sheet.ShiftRows(i + 1,                                 //--开始行
+        //                        //    i + 1,                            //--结束行
+        //                        //    1,                             //--移动大小(行数)--往下移动
+        //                        //    true,                                   //是否复制行高
+        //                        //    false,                                  //是否重置行高
+        //                        //    true                                    //是否移动批注
+        //                        //    );
+        //                        IRow newRow = sheet.CreateRow(i + 1);//先新增一行
+        //                        ICell sourceCell = null;
+        //                        ICell targetCell = null;
+        //                        //复制格式到新的行
+        //                        for (int m = row.FirstCellNum; m < row.LastCellNum; m++)
+        //                        {
+        //                            sourceCell = row.GetCell(m);
+        //                            if (sourceCell == null)
+        //                                continue;
+        //                            targetCell = newRow.CreateCell(m);
+        //                            targetCell.CellStyle = sourceCell.CellStyle;
+        //                            targetCell.SetCellType(sourceCell.CellType);
 
-                                sheet.GetRow(i + 1).Height = (short)(shH - 409 * 20);
-                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
-                                sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
-                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
-                                sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
-                                //最后一行始终居中靠上
-                                sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
-                                sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
-                            }
-                            else
-                            {
-                                row.Height = shH;
-                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
-                                sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i, startCol, endCol));
-                                //最后一行始终居中靠上
-                                sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
-                                sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
-                            }
-                            return pageCount;
-                        }
-                        else
-                        {
-                            if (IsNewPageRow(sheet, i))
-                            {
-                                //sheet.SetRowBreak(i - 1);
-                            }
-                            totalH = tempH;
-                            continue;
-                        }
-                    }
-                    else//不超过一页
-                    {
-                        if (i == lRow)//已经最后一行
-                        {
-                            short shH = (short)(PAGE_HEIGHT - totalH - (1 * headH));
-                            if (shH > 409 * 20)//最高只能设置一行为409
-                            {
-                                //sheet.ShiftRows(i + 1,                                 //--开始行
-                                //    i + 1,                            //--结束行
-                                //    1,                             //--移动大小(行数)--往下移动
-                                //    true,                                   //是否复制行高
-                                //    false,                                  //是否重置行高
-                                //    true                                    //是否移动批注
-                                //    );
-                                IRow newRow = sheet.CreateRow(i + 1);//先新增一行
-                                ICell sourceCell = null;
-                                ICell targetCell = null;
-                                //复制格式到新的行
-                                for (int m = row.FirstCellNum; m < row.LastCellNum; m++)
-                                {
-                                    sourceCell = row.GetCell(m);
-                                    if (sourceCell == null)
-                                        continue;
-                                    targetCell = newRow.CreateCell(m);
-                                    targetCell.CellStyle = sourceCell.CellStyle;
-                                    targetCell.SetCellType(sourceCell.CellType);
+        //                        }
+        //                        row.Height = 409 * 20;
 
-                                }
-                                row.Height = 409 * 20;
-                                //测试中应该是106*20
-                                sheet.GetRow(i + 1).Height = (short)(shH - 409 * 20);
-                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
-                                sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
-                                //最后一行始终居中靠上
-                                sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
-                                sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
-                            }
-                            else
-                            {
-                                row.Height = shH;
-                                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
-                                sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i, startCol, endCol));
-                                //最后一行始终居中靠上
-                                sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
-                                sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
-                            }
-                            return pageCount;
-                        }
-                        else
-                        {
-                            totalH = totalH + tempH;
-                            continue;
-                        }
-                    }
-                }
-                return pageCount;
-            }
-            catch (Exception ex)
-            {
-                classLims_NPOI.WriteLog(ex, "");
-                return 0;
-            }
-        }
+        //                        sheet.GetRow(i + 1).Height = (short)(shH - 409 * 20);
+        //                        //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+        //                        sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
+        //                        //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+        //                        sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
+        //                        //最后一行始终居中靠上
+        //                        sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+        //                        sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
+        //                    }
+        //                    else
+        //                    {
+        //                        row.Height = shH;
+        //                        //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+        //                        sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i, startCol, endCol));
+        //                        //最后一行始终居中靠上
+        //                        sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+        //                        sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
+        //                    }
+        //                    return pageCount;
+        //                }
+        //                else
+        //                {
+        //                    if (IsNewPageRow(sheet, i))
+        //                    {
+        //                        //sheet.SetRowBreak(i - 1);
+        //                    }
+        //                    totalH = tempH;
+        //                    continue;
+        //                }
+        //            }
+        //            else//不超过一页
+        //            {
+        //                if (i == lRow)//已经最后一行
+        //                {
+        //                    short shH = (short)(PAGE_HEIGHT - totalH - (1 * headH));
+        //                    if (shH > 409 * 20)//最高只能设置一行为409
+        //                    {
+        //                        //sheet.ShiftRows(i + 1,                                 //--开始行
+        //                        //    i + 1,                            //--结束行
+        //                        //    1,                             //--移动大小(行数)--往下移动
+        //                        //    true,                                   //是否复制行高
+        //                        //    false,                                  //是否重置行高
+        //                        //    true                                    //是否移动批注
+        //                        //    );
+        //                        IRow newRow = sheet.CreateRow(i + 1);//先新增一行
+        //                        ICell sourceCell = null;
+        //                        ICell targetCell = null;
+        //                        //复制格式到新的行
+        //                        for (int m = row.FirstCellNum; m < row.LastCellNum; m++)
+        //                        {
+        //                            sourceCell = row.GetCell(m);
+        //                            if (sourceCell == null)
+        //                                continue;
+        //                            targetCell = newRow.CreateCell(m);
+        //                            targetCell.CellStyle = sourceCell.CellStyle;
+        //                            targetCell.SetCellType(sourceCell.CellType);
+
+        //                        }
+        //                        row.Height = 409 * 20;
+        //                        //测试中应该是106*20
+        //                        sheet.GetRow(i + 1).Height = (short)(shH - 409 * 20);
+        //                        //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+        //                        sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i + 1, startCol, endCol));
+        //                        //最后一行始终居中靠上
+        //                        sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+        //                        sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
+        //                    }
+        //                    else
+        //                    {
+        //                        row.Height = shH;
+        //                        //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+        //                        sheet.AddMergedRegion(new NPOI.SS.Util.CellRangeAddress(i, i, startCol, endCol));
+        //                        //最后一行始终居中靠上
+        //                        sheet.GetRow(i).GetCell(startCol).CellStyle.Alignment = NPOI.SS.UserModel.HorizontalAlignment.Center;
+        //                        sheet.GetRow(i).GetCell(startCol).CellStyle.VerticalAlignment = VerticalAlignment.Top;
+        //                    }
+        //                    return pageCount;
+        //                }
+        //                else
+        //                {
+        //                    totalH = totalH + tempH;
+        //                    continue;
+        //                }
+        //            }
+        //        }
+        //        return pageCount;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        classLims_NPOI.WriteLog(ex, "");
+        //        return 0;
+        //    }
+        //}
+        #endregion
+
 
         public void dealMergedAreaInPages(string filePath, int sheetIndex)
         {
@@ -3926,8 +3929,10 @@ namespace nsLims_NPOI
         /// <param name="dArray">二维数组,第一行为表头</param>
         /// <param name="colListC"></param>
         /// <param name="updHeight">行高的修改量</param>
+        /// <param name="specialChars">要替换的特殊字符</param>
         /// <returns></returns>
-        public Boolean reportOneDimDExcel(string modlePath, int sheetIndex, string targetPath, object[] dArray, object[] colListC, double updHeight)
+        public Boolean reportOneDimDExcel(string modlePath, int sheetIndex, string targetPath, object[] dArray,
+            object[] colListC, double updHeight, object[] specialChars)
         {
             try
             {
@@ -4048,11 +4053,12 @@ namespace nsLims_NPOI
                     colseq[i]++;
                 }
                 classExcelMthd cem = new classExcelMthd();
-                cem.reportOneDimDExcelFormat(targetPath, sheetIndex+1, colseq, row+1, row + dic.Count+1, updHeight, colRange[0]+1, colRange[1]+1);
+                cem.reportOneDimDExcelFormat(targetPath, sheetIndex+1, colseq, row+1, updHeight, colRange[0]+1, colRange[1]+1, specialChars);
 
                 //拉伸最后一行"以下空白"子样
-                this.lastPageFirstRow = cem.lastPageFirstRow - 1;
-                stretchLastRowHeight(targetPath, sheetIndex);
+                //this.lastPageFirstRow = cem.lastPageFirstRow - 1;
+                //stretchLastRowHeight(targetPath, sheetIndex);
+                //classExcelMthd.stretchLastRowHeight(targetPath, sheetIndex+1);
                 return true;
             }
             catch (Exception ex)

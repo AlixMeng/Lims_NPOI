@@ -35,70 +35,85 @@ namespace nsLims_NPOI
             //DocXAction dxa = new DocXAction();
             //MergePDF mpf = new MergePDF();
 
-            object missing = Type.Missing;
-            EXCEL.ApplicationClass excel = null;
-            EXCEL.Workbook wb = null;
-            EXCEL.Workbooks workBooks = null;
-            try
-            {
-                excel = new EXCEL.ApplicationClass();
-                workBooks = excel.Workbooks;
-                wb = workBooks.Open("D:\\读取行高.xlsx", missing, missing,
-                    missing, missing, missing, missing, missing,
-                    missing, missing, missing, missing, missing,
-                    missing, missing);
-                //cem.dealMergedAreaInPages_new(wb, 1, 39, 8);
-                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[1];
-                for (int i = 1; i <= 2; i++)
-                {
-                    EXCEL.Range row = (EXCEL.Range)sheet.Rows[i];
-                    if (row == null) continue;
-
-                    double tempH;
-                    if ((bool)((EXCEL.Range)sheet.Rows[i]).Hidden == true)
-                    {
-                        tempH = 0;
-                    }
-                    else
-                    {
-                        tempH = (double)((EXCEL.Range)sheet.Rows[i]).Height;
-                    }
-                }
-                wb.SaveAs("D:\\读取行高_new.xls", EXCEL.XlFileFormat.xlExcel8, null, null, false, false, EXCEL.XlSaveAsAccessMode.xlNoChange, null, null, null, null, null);
-            }
-            catch (Exception ex)
-            {
-                classLims_NPOI.WriteLog(ex, "");
-            }
-            finally
-            {
-                if (wb != null)
-                {
-                    //wb.Close(false, missing, false);
-                    wb.Close(false, missing, missing);
-                    int i = Marshal.ReleaseComObject(wb);
-                    wb = null;
-                }
-                if (workBooks != null)
-                {
-                    workBooks.Close();
-                    int i = Marshal.ReleaseComObject(workBooks);
-                    workBooks = null;
-                }
-                if (excel != null)
-                {
-                    excel.Quit();
-                    int i = Marshal.ReleaseComObject(excel);
-                    excel = null;
-                }
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-
-            }
-
+            object[] o1 = { ")", "）" };
+            object[] o2 = { "(", "（" };
+            object[] o3 = { "%", "％" };
+            object[] o = { o1, o2, o3 };
+            cem.reportOneDimDExcelFormat("D:\\TEST.xls", 1, new int[]{ 1,2,3,8}, 5, 9.25, 1, 8, o);
 
             string s = "";
-            #region
+
+            #region 作废的测试代码
+
+            //mpf.addImageToPdf_Left("D:\\打印版.pdf", "D:\\打印版_new.pdf", "D:\\公司 CMAF川+CNAS.jpg", 93.5, 700.0, 100);
+            //mpf.addImageToPdf("D:\\打印版_new.pdf", "D:\\打印版.pdf", "D:\\建设工程专用章.jpg", 120.0, 745, 146.2, "");
+            //mpf.addImageToPdf("D:\\打印版.pdf", "D:\\打印版_new.pdf", "D:\\建设工程专用章.jpg", 100.0, 625, 146.2, "");
+
+
+            //建筑方章
+            //mpf.addImageToPdf_Left("D:\\默认封面.pdf", "D:\\默认封面_new.pdf", "D:\\公司 CMAF川+CNAS.jpg", 93.5, 670.0, 100);
+            //mpf.addImageToPdf("D:\\默认封面_new.pdf", "D:\\默认封面.pdf", "D:\\建设工程专用章.jpg", 120.0, 745, 146.2, "");
+
+            //object missing = System.Reflection.Missing.Value;
+            //string strTargetFile = "";
+            //EXCEL.ApplicationClass excel = null;
+            //EXCEL.Workbook wb = null;
+            //EXCEL.Workbooks workBooks = null;
+            //try
+            //{
+            //    excel = new EXCEL.ApplicationClass();
+            //    excel.DisplayAlerts = false;
+            //    workBooks = excel.Workbooks;
+            //    wb = workBooks.Open("D:\\测试行高.xlsx", missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing);
+            //    //实例化Sheet后,释放Excel进程就会失败
+            //    //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+            //    double headH = 0;
+            //    EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[1];
+            //    EXCEL.Range range = (EXCEL.Range)sheet.Rows[1];
+            //    headH = (double)range.Height;
+            //    alert(headH);
+            //    range = (EXCEL.Range)sheet.Rows[2];
+            //    headH = (double)range.Height;
+            //    alert(headH);
+            //}
+            //catch (Exception ex)
+            //{
+            //    classLims_NPOI.WriteLog(ex, "");
+            //}
+            //finally
+            //{
+            //    if (wb != null)
+            //    {
+            //        //wb.Close(false, missing, false);
+            //        wb.Close(false, missing, missing);
+            //        int i = Marshal.ReleaseComObject(wb);
+            //        wb = null;
+            //    }
+            //    if (workBooks != null)
+            //    {
+            //        workBooks.Close();
+            //        int i = Marshal.ReleaseComObject(workBooks);
+            //        workBooks = null;
+            //    }
+            //    if (excel != null)
+            //    {
+            //        excel.Quit();
+            //        int i = Marshal.ReleaseComObject(excel);
+            //        excel = null;
+            //    }
+            //    GC.Collect();
+            //    GC.WaitForPendingFinalizers();
+
+            //}
+
+            //object[] o1 = { "&{主检}", "D:\\ding.du.png" };
+            //object[] o2 = { "&{二审}", "D:\\internet.jpg" };
+            //object[] o3 = { "&{终审}", "D:\\建设工程专用章.jpg" };
+            //object[] o = { o1, o2, o3 };
+            //cem.addImagesToExcel_byOffice("D:\\默认首页.xls", 0, o, 63, 24);
 
             //mpf.addPagenoToOnePage("D:\\sSyFy.pdf", "D:\\waterpdf.pdf", 550, 727, 1);
             //dxa.InsertPicture("D:\\Jl5020102.docx", "&[评定人]", "D:\\dd.jpg", "RIGHT", 40.0, 100.0);

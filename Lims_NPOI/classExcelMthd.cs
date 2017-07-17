@@ -20,6 +20,8 @@ namespace nsLims_NPOI
         //16403, 16865
         //820.25, 首页为14.25pound时843.25, 首页为14.25pound时 833.75
         //手动设置的测试总高,使用不同字体会有不同的总高度,此处使用宋体10号字体
+        //private static double PAGE_HEIGHT = 820.15;
+        //private static double PAGE_HEIGHT = 842;
         private static double PAGE_HEIGHT = 820.15;
         //最后一页的起始行号
         public int lastPageFirstRow;
@@ -109,7 +111,7 @@ namespace nsLims_NPOI
                     missing, missing);
                 //实例化Sheet后,释放Excel进程就会失败
                 //对于sheet的操作必须放在新的方法中,接口层级为Workbook
-                strTargetFile = addImageToSheet(workbookPath, wb, sheetIndex+1, rangeName, imagePath, imgFlag, PicWidth, PicHeight);
+                strTargetFile = addImageToSheet(workbookPath, wb, sheetIndex + 1, rangeName, imagePath, imgFlag, PicWidth, PicHeight);
 
             }
             catch (Exception ex)
@@ -159,10 +161,145 @@ namespace nsLims_NPOI
 
         }
 
+
+        /// <summary>
+        /// 添加图片到指定excel,图片指定大小,使用office的com组件, 批量添加;
+        ///      在签名图片高度保持0.9cm( 25.4磅)的情况下,要求图片宽高比不能高于黄金比例(0.618),否则将盖不住标记字符串
+        /// </summary>
+        /// <param name="workbookPath">源工作簿路径</param>
+        /// <param name="sheetIndex">工作表sheet索引</param>
+        /// <param name="dArray">图片添加位置标记和图片文件路径数组</param>
+        /// <param name="PicWidth">图片宽度,无实际意义,实际值是按高度和图片比例计算出来的</param>
+        /// <param name="PicHeight">图片高度</param>
+        /// <returns></returns>
+        public bool addImagesToExcel_byOffice(string workbookPath, int sheetIndex, object[] dArray, double PicWidth, double PicHeight)
+        {
+            bool flag = true;
+            try
+            {
+                if (!File.Exists(workbookPath))
+                {
+                    return false;
+                }
+                //object missing = Type.Missing;
+                object missing = System.Reflection.Missing.Value;
+                List<string> rangeNameList = new List<string>();
+                //按照标记找到位置
+                Dictionary<string, string> dictionary = classLims_NPOI.dArray2Dictionary(dArray);
+                foreach (var oneMapPoint in dictionary)
+                {
+                    string key = oneMapPoint.Key.ToString();
+                    string value = oneMapPoint.Value.ToString();
+                    //按照标记找到range单元格名
+                    string rangeName = new classLims_NPOI().getExcelRangeByFlag(workbookPath, sheetIndex, key);
+                    if (rangeName == null || rangeName == "")
+                    {
+                        rangeNameList.Add("");
+                    }
+                    else
+                    {
+                        rangeNameList.Add(rangeName);
+                    }
+                }
+
+
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbook wb = null;
+                EXCEL.Workbooks workBooks = null;
+                try
+                {
+                    excel = new EXCEL.ApplicationClass();
+                    excel.DisplayAlerts = false;
+                    workBooks = excel.Workbooks;
+                    wb = workBooks.Open(workbookPath, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing);
+                    //实例化Sheet后,释放Excel进程就会失败
+                    //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+                    //按照标记找到位置并插入图片
+                    int i = 0;
+                    foreach (var oneMapPoint in dictionary)
+                    {
+                        string key = oneMapPoint.Key.ToString();
+                        string value = oneMapPoint.Value.ToString();
+
+                        if (rangeNameList[i] == null || rangeNameList[i] == "")
+                        {
+                            classLims_NPOI.WriteLog("标记字符串:" + key + " 未检测到!", "");
+                            i++;
+                            if (i > rangeNameList.Count)
+                                break;
+                            continue;
+                        }
+                        if (value == null || value == "" || !File.Exists(value))
+                        {
+                            classLims_NPOI.WriteLog("签名文件:" + value + " 不存在!", "");
+                            i++;
+                            if (i > rangeNameList.Count)
+                                break;
+                            continue;
+                        }
+
+                        //应该是签名图片高度固定,但宽度会等比例缩放
+                        System.Drawing.Image image = System.Drawing.Image.FromFile(value);
+                        var imageWidth = image.Width;
+                        var imageHeight = image.Height;
+                        PicWidth = PicHeight * imageWidth / imageHeight;
+                        addImageToSheet(workbookPath, wb, sheetIndex + 1, rangeNameList[i], value, key, PicWidth, PicHeight);
+                        i++;
+                        if (i > rangeNameList.Count)
+                            break;
+                    }
+                    wb.Save();
+                    //strTargetFile = addImageToSheet(workbookPath, wb, sheetIndex + 1, rangeName, imagePath, imgFlag, PicWidth, PicHeight);
+
+                }
+                catch (Exception ex)
+                {
+                    classLims_NPOI.WriteLog(ex, "");
+                    flag = false;
+                }
+                finally
+                {
+                    if (wb != null)
+                    {
+                        //wb.Close(false, missing, false);
+                        wb.Close(false, missing, missing);
+                        int i = Marshal.ReleaseComObject(wb);
+                        wb = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        int i = Marshal.ReleaseComObject(workBooks);
+                        workBooks = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        int i = Marshal.ReleaseComObject(excel);
+                        excel = null;
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                }
+            }
+            catch (Exception e)
+            {
+                classLims_NPOI.WriteLog(e, "");
+                flag = false;
+            }
+            return flag;
+
+        }
+
+
         public static bool createNew03Excel(string strSourceFile)
         {
             bool flag = true;
-            if(true)
+            if (true)
             {
                 if (File.Exists(strSourceFile))
                 {
@@ -228,14 +365,16 @@ namespace nsLims_NPOI
         /// <summary>
         /// 处理2页之间的合并单元格,上下单独合并
         /// </summary>
-        /// <param name="filePath"></param>
+        /// <param name="wb"></param>
         /// <param name="sheetIndex"></param>
-        public void dealMergedAreaInPages_new(EXCEL.Workbook wb, int sheetIndex, int endRow, int endCol)
+        /// <param name="endCol"></param>
+        public void dealMergedAreaInPages_new(EXCEL.Workbook wb, int sheetIndex, int endCol)
         {
             try
             {
                 object missing = System.Reflection.Missing.Value;
                 EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+                int endRow = sheet.UsedRange.Rows.Count;
 
                 System.Drawing.Point p = selectPosition(sheet, "检测项目", endRow, endCol);
                 int testNoIndex = p.Y;
@@ -244,7 +383,7 @@ namespace nsLims_NPOI
                 int maxColIndex = endCol;
 
                 //获取每页第一行的索引
-                List<int> firstPageRowIndex = getNewPageFirstRow(sheet, endRow, endCol);
+                List<int> firstPageRowIndex = getNewPageFirstRow(sheet);
                 //记录下最后一页的起始行号,如果页数不超过一页,则应该返回表头下第一行行号
                 if (firstPageRowIndex.Count == 0)
                 {
@@ -320,7 +459,7 @@ namespace nsLims_NPOI
                     //   "," + mergedArea[2] +
                     //   "," + mergedArea[3] + "]", "");
                     //合并区域的起始行大于页起始行可不用处理
-                    if (mergedArea[0] > rowIndex) continue;
+                    if (mergedArea[0] >= rowIndex) continue;
                     //合并上一页,但相等时不合并
                     if (mergedArea[0] < rowIndex)
                     {
@@ -347,6 +486,7 @@ namespace nsLims_NPOI
             }
 
         }
+
         /// <summary>
         /// excel刷新
         /// </summary>
@@ -1032,70 +1172,145 @@ namespace nsLims_NPOI
             }
         }
 
+        #region 废弃的,使用计算 获取默认分页位置
+        ////获取sheet每一页的第一行索引,第一页除外
+        ///// <summary>
+        ///// 获取sheet每一页的第一行索引,第一页除外
+        ///// </summary>
+        ///// <param name="sheet"></param>
+        ///// <returns></returns>
+        //private List<int> getNewPageFirstRow(EXCEL.Worksheet sheet, int endRow, int endCol)
+        //{
+        //    List<int> arrayFr = new List<int>();
+        //    try
+        //    {
+        //        int startHeadRow, endHeadRow;
+        //        int[] iRange = getRepeatingRowsRange(sheet, endCol);
+        //        if (iRange == null)
+        //        {
+        //            startHeadRow = 0;
+        //            endHeadRow = 0;
+        //        }
+        //        else
+        //        {
+        //            startHeadRow = iRange[0];
+        //            endHeadRow = iRange[1];
+        //        }
+        //        int fRow = endHeadRow + 1;
+        //        //int lRow = sheet.Range["A65535"].End[EXCEL.XlDirection.xlUp].Row;
+        //        int lRow = endRow;
+
+        //        double totalH = 0; //总行高
+        //                           //高度换算 1厘米＝28.346456692913389磅
+        //        double headH = 0; //表头高度
+        //        headH = sheet.PageSetup.TopMargin + sheet.PageSetup.BottomMargin;
+        //        if (iRange == null)
+        //        {
+        //            headH += 0;
+        //        }
+        //        else
+        //        {
+        //            ////不使用区域提取总行高,会不准确;改为使用遍历行高的方式
+        //            //double tempTitleHeight = 0;
+        //            //for(int i= iRange[0]; i<= iRange[1]; i++)
+        //            //{
+        //            //    EXCEL.Range row = (EXCEL.Range)sheet.Rows[i];
+        //            //    tempTitleHeight += (double)row.Height;
+        //            //}
+        //            //headH += tempTitleHeight;
+        //            headH += (double)sheet.get_Range(sheet.Cells[iRange[0], iRange[2]], sheet.Cells[iRange[1], iRange[3]]).Height;
+        //        }
+
+        //        for (int i = fRow; i <= lRow; i++)
+        //        {
+        //            //classLims_NPOI.WriteLog("i="+i,"");
+        //            EXCEL.Range row = (EXCEL.Range)sheet.Rows[i];
+        //            if (row == null) continue;
+
+        //            double tempH;
+        //            if ((bool)((EXCEL.Range)sheet.Rows[i]).Hidden == true)
+        //            {
+        //                tempH = 0;
+        //            }
+        //            else
+        //            {
+        //                tempH = (double)((EXCEL.Range)sheet.Rows[i]).Height;
+        //            }
+
+        //            if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
+        //            {
+        //                arrayFr.Add(i);
+        //                totalH = tempH;
+        //            }
+        //            else
+        //            {
+        //                totalH = totalH + tempH;
+        //            }
+        //        }
+        //        return arrayFr;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        classLims_NPOI.WriteLog(ex, "");
+        //        return arrayFr;
+        //    }
+
+        //}
+
+
+        ////获取sheet每一页的第一行索引,第一页除外
+        ///// <summary>
+        ///// 获取sheet每一页的第一行索引,第一页除外
+        ///// </summary>
+        ///// <param name="sheet"></param>
+        ///// <returns></returns>
+        //private List<int> getNewPageFirstRow(EXCEL.Worksheet sheet, int endRow, int endCol)
+        //{
+        //    List<int> arrayFr = new List<int>();
+        //    try
+        //    {
+        //        //获取默认行分页符集合
+        //        var hpb = sheet.HPageBreaks;
+        //        for (int i = 0; i < hpb.Count; i++)
+        //        {
+        //            var hpbRange = hpb[i].Location;
+        //            arrayFr.Add(hpbRange.Row);
+        //        }
+        //        return arrayFr;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        classLims_NPOI.WriteLog(ex, "");
+        //        return arrayFr;
+        //    }
+
+        //}
+        #endregion
+
         //获取sheet每一页的第一行索引,第一页除外
         /// <summary>
         /// 获取sheet每一页的第一行索引,第一页除外
         /// </summary>
         /// <param name="sheet"></param>
         /// <returns></returns>
-        private List<int> getNewPageFirstRow(EXCEL.Worksheet sheet, int endRow, int endCol)
+        private static List<int> getNewPageFirstRow(EXCEL.Worksheet sheet)
         {
             List<int> arrayFr = new List<int>();
             try
             {
-                int startHeadRow, endHeadRow;
-                int[] iRange = getRepeatingRowsRange(sheet, endCol);
-                if (iRange == null)
-                {
-                    startHeadRow = 0;
-                    endHeadRow = 0;
-                }
-                else
-                {
-                    startHeadRow = iRange[0];
-                    endHeadRow = iRange[1];
-                }
-                int fRow = endHeadRow + 1;
-                //int lRow = sheet.Range["A65535"].End[EXCEL.XlDirection.xlUp].Row;
-                int lRow = endRow;
+                //EXCEL.Range range = sheet.Range["A47"];
+                //var value = getMergerCellValue(sheet, 47, 1);
+                //获取默认行分页符集合
+                var hpb = sheet.HPageBreaks;
+                int hpbCount = sheet.HPageBreaks.Count;
 
-                double totalH = 0; //总行高
-                                   //高度换算 1厘米＝28.346456692913389磅
-                double headH = 0; //表头高度
-                headH = sheet.PageSetup.TopMargin + sheet.PageSetup.BottomMargin;
-                if (iRange == null)
+                for (int i = 1; i <= hpbCount; i++)
                 {
-                    headH += 0;
-                }
-                else
-                {
-                    headH += (double)sheet.get_Range(sheet.Cells[iRange[0], iRange[2]], sheet.Cells[iRange[1], iRange[3]]).Height;
-                }
-
-                for (int i = fRow; i <= lRow; i++)
-                {
-                    //classLims_NPOI.WriteLog("i="+i,"");
-                    EXCEL.Range row = (EXCEL.Range)sheet.Rows[i];
-                    if (row == null) continue;
-
-                    double tempH;
-                    if ((bool)((EXCEL.Range)sheet.Rows[i]).Hidden == true)
+                    var hPageBreak = hpb[i];
+                    if (hPageBreak != null)
                     {
-                        tempH = 0;
-                    }
-                    else
-                    {
-                        tempH = (double)((EXCEL.Range)sheet.Rows[i]).Height;
-                    }
-
-                    if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
-                    {
-                        arrayFr.Add(i);
-                        totalH = tempH;
-                    }
-                    else
-                    {
-                        totalH = totalH + tempH;
+                        var hpbRange = hPageBreak.Location;
+                        arrayFr.Add(hpbRange.Row);
                     }
                 }
                 return arrayFr;
@@ -1108,12 +1323,69 @@ namespace nsLims_NPOI
 
         }
 
+        //获取sheet每一页的第一行索引,第一页除外
+        /// <summary>
+        /// 获取sheet每一页的第一行索引,第一页除外
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <returns></returns>
+        public static List<int> getNewPageFirstRow(string sourceFile, int sheetIndex)
+        {
+            List<int> arrayFr = new List<int>();
+            object missing = System.Reflection.Missing.Value;
+            EXCEL.ApplicationClass excel = null;
+            EXCEL.Workbook wb = null;
+            EXCEL.Workbooks workBooks = null;
+            try
+            {
+                excel = new EXCEL.ApplicationClass();
+                excel.DisplayAlerts = false;
+                workBooks = excel.Workbooks;
+                wb = workBooks.Open(sourceFile, missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing);
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+                arrayFr = getNewPageFirstRow(sheet);
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+            finally
+            {
+                if (wb != null)
+                {
+                    //wb.Close(false, missing, false);
+                    wb.Close(false, missing, missing);
+                    int i = Marshal.ReleaseComObject(wb);
+                    wb = null;
+                }
+                if (workBooks != null)
+                {
+                    workBooks.Close();
+                    int i = Marshal.ReleaseComObject(workBooks);
+                    workBooks = null;
+                }
+                if (excel != null)
+                {
+                    excel.Quit();
+                    int i = Marshal.ReleaseComObject(excel);
+                    excel = null;
+                }
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+            }
+            return arrayFr;
+        }
+
         /// <summary>
         /// 返回sheet重复区域,分别为起始行号,结束行号,起始列号,结束列号
         /// </summary>
         /// <param name="sheet"></param>
         /// <returns>整型数组,分别为起始行号,结束行号,起始列号,结束列号</returns>
-        private int[] getRepeatingRowsRange(EXCEL.Worksheet sheet, int endCol)
+        private static int[] getRepeatingRowsRange(EXCEL.Worksheet sheet, int endCol)
         {
             int printCount = sheet.PrintedCommentPages;
             string pntRow = sheet.PageSetup.PrintTitleRows;//"$1:$2"
@@ -1222,19 +1494,20 @@ namespace nsLims_NPOI
         /// <param name="wb"></param>
         /// <param name="sheetIndex"></param>
         /// <param name="startRow"></param>
-        /// <param name="maxRow"></param>
         /// <param name="maxCol"></param>
-        private void mergeRowTestAndAnalyte(EXCEL.Workbook wb, int sheetIndex, int startRow, int maxRow, int maxCol)
+        private void mergeRowTestAndAnalyte(EXCEL.Workbook wb, int sheetIndex, int startRow, int maxCol)
         {
             try
             {
                 EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+                int endRow = sheet.UsedRange.Rows.Count;
 
-                System.Drawing.Point startColPoint = selectPosition(sheet, "检测项目", maxRow, maxCol);
-                System.Drawing.Point endColPoint = selectPosition(sheet, "分析项", maxRow, maxCol);
+                System.Drawing.Point startColPoint = selectPosition(sheet, "检测项目", endRow, maxCol);
+                System.Drawing.Point endColPoint = selectPosition(sheet, "分析项", endRow, maxCol);
                 int startCol = startColPoint.Y;
                 int endCol = endColPoint.Y;
-                for (int i = startRow; i <= maxRow; i++)//遍历需要合并的行
+                //"----以下空白----"的行不用遍历
+                for (int i = startRow; i < endRow; i++)//遍历需要合并的行
                 {
                     string testValue = getMergerCellValue(sheet, i, startCol);
                     string analyteValue = getMergerCellValue(sheet, i, endCol);
@@ -1262,6 +1535,9 @@ namespace nsLims_NPOI
         /// </summary>
         /// <param name="wb"></param>
         /// <param name="sheetIndex"></param>
+        /// <param name="startRow"></param>
+        /// <param name="endRow"></param>
+        /// <param name="endCol"></param>
         private void mergeRowCells(EXCEL.Workbook wb, int sheetIndex, int startRow, int endRow, int endCol)
         {
             try
@@ -1324,12 +1600,13 @@ namespace nsLims_NPOI
         /// <param name="sheetName">目标sheet</param>
         /// <param name="colList">要合并的单元格所在列</param>
         /// <param name="startRow">开始行</param>
-        /// <param name="endRow">结束行</param>
-        public void mergeCells(EXCEL.Workbook wb, int sheetIndex, int[] colList, int startRow, int endRow, int endCol)
+        /// <param name="endCol">结束列</param>
+        public void mergeCells(EXCEL.Workbook wb, int sheetIndex, int[] colList, int startRow, int endCol)
         {
             try
             {
                 EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+                int endRow = sheet.UsedRange.Rows.Count;
                 int TESTNO_colIndex = selectPosition(sheet, "检测项目", endRow, endCol).Y;//检测项目所在列号
                 for (int i = 0; i < colList.Length; i++)//遍历需要合并的列
                 {
@@ -1391,16 +1668,80 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
+        /// 合并指定列,按值相等合并
+        /// </summary>
+        /// <param name="sheetName">目标sheet</param>
+        /// <param name="colList">要合并的单元格所在列</param>
+        /// <param name="startRow">开始行</param>
+        /// <param name="endRow">结束行</param>
+        public void mergeCells(string sourceFile, int sheetIndex, int[] colList, int startRow, int endCol)
+        {
+            if (File.Exists(sourceFile))
+            {
+                object missing = Type.Missing;
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbook workBook = null;
+                EXCEL.Workbooks workBooks = null;
+                try
+                {
+                    excel = new EXCEL.ApplicationClass();
+                    excel.DisplayAlerts = false;
+                    workBooks = excel.Workbooks;
+                    workBook = workBooks.Open(sourceFile, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing);
+
+                    mergeCells(workBook, sheetIndex, colList, startRow, endCol);
+                    workBook.Save();
+                }
+                catch (Exception ex)
+                {
+                    classLims_NPOI.WriteLog(ex, "");
+                }
+                finally
+                {
+                    if (workBook != null)
+                    {
+                        workBook.Close(false, missing, missing);
+                        Marshal.ReleaseComObject(workBook);
+                        workBook = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        Marshal.ReleaseComObject(workBooks);
+                        workBook = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        Marshal.ReleaseComObject(excel);
+                        //Marshal.FinalReleaseComObject(excel);
+                        excel = null;
+
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+
+                }
+            }
+        }
+
+        /// <summary>
         /// 合并检测项目和分析项
         /// </summary>
         /// <param name="wb">目标workbook</param>
         /// <param name="sheetIndex"></param>
         /// <param name="str1">检测项目标记字符串</param>
         /// <param name="str2">分析项标记字符串</param>
-        private void mergeTestCell(EXCEL.Workbook wb, int sheetIndex, string str1, string str2, int endRow, int endCol)
+        private void mergeTestCell(EXCEL.Workbook wb, int sheetIndex, string str1, string str2, int endCol)
         {
 
             EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+            int endRow = sheet.UsedRange.Rows.Count;
+
             System.Drawing.Point p1 = selectPosition(sheet, str1, endRow, endCol);
             System.Drawing.Point p2 = selectPosition(sheet, str2, endRow, endCol);
             //不在同一行不合并
@@ -1416,19 +1757,33 @@ namespace nsLims_NPOI
         }
 
         //处理报告附页的格式调整
-        private void reportOneDimDExcelFormat(EXCEL.Workbook wb, int sheetIndex, int[] colseq, int startRow, int endRow, double updHeight, int startCol, int endCol)
+        private void reportOneDimDExcelFormat(EXCEL.Workbook wb, int sheetIndex, int[] colseq, int startRow,
+            double updHeight, int startCol, int endCol, object[] specialChars)
         {
-            /*mergeRowCells(wb, sheetIndex, startRow, endRow);*/
-            mergeRowTestAndAnalyte(wb, sheetIndex, startRow, endRow, endCol);
-            mergeCells(wb, sheetIndex, colseq, startRow, endRow, endCol);
-            setAutoRowHeight(wb, sheetIndex, startRow, endRow, startCol, endCol, updHeight);//设置行高
-            /*updateSheesRowHeight(wb, sheetIndex, startRow, endRow, updHeight);*/
-            dealMergedAreaInPages_new(wb, sheetIndex, endRow, endCol);
-            mergeTestCell(wb, sheetIndex, "检测项目", "分析项", endRow, endCol);
+            ReplaceAll(wb, sheetIndex, specialChars);
+            mergeRowTestAndAnalyte(wb, sheetIndex, startRow, endCol);//合并检测项目和分析项
+            mergeCells(wb, sheetIndex, colseq, startRow, endCol);//合并相同检测项目的同列数据
+            setAutoRowHeight(wb, sheetIndex, startRow, startCol, endCol, updHeight);//设置行高
+            dealMergedAreaInPages_new(wb, sheetIndex, endCol);//跨页的要分开
+            mergeTestCell(wb, sheetIndex, "检测项目", "分析项", endCol);//合并表头的"检测项目","分析项"2个单元格
+            stretchLastRowHeight(wb, sheetIndex);//拉伸最后一行,设置边框位置为页底
         }
 
         //处理报告附页的格式调整
-        public bool reportOneDimDExcelFormat(string strSourceFile, int sheetIndex, int[] colseq, int startRow, int endRow, double updHeight, int startCol, int endCol)
+        /// <summary>
+        /// 处理报告附页的格式调整
+        /// </summary>
+        /// <param name="strSourceFile">目标文件</param>
+        /// <param name="sheetIndex">sheet索引</param>
+        /// <param name="colseq">要合并的列索引</param>
+        /// <param name="startRow">数据页起始列</param>
+        /// <param name="updHeight">调整行高</param>
+        /// <param name="startCol">起始列</param>
+        /// <param name="endCol">结束列</param>
+        /// <param name="specialChars">替换字符数组</param>
+        /// <returns></returns>
+        public bool reportOneDimDExcelFormat(string strSourceFile, int sheetIndex, int[] colseq, int startRow,
+            double updHeight, int startCol, int endCol, object[] specialChars)
         {
             bool flag = true;
             if (File.Exists(strSourceFile))
@@ -1447,7 +1802,11 @@ namespace nsLims_NPOI
                         missing, missing, missing, missing, missing,
                         missing, missing);
 
-                    reportOneDimDExcelFormat(workBook, sheetIndex, colseq, startRow, endRow, updHeight, startCol, endCol);
+                    //先使用分页视图打开,EXCEl获取 HPageBreaks 需要在分页视图中
+                    excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
+                    reportOneDimDExcelFormat(workBook, sheetIndex, colseq, startRow, updHeight, startCol, endCol, specialChars);
+                    //再还原为普通视图
+                    excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
                     workBook.Save();
                 }
                 catch (Exception ex)
@@ -1503,6 +1862,7 @@ namespace nsLims_NPOI
                 string value = oneMapPoint.Value.ToString();
                 oldStr = key;
                 newStr = value;
+                //xlPart代表匹配任一部分搜索文本。, xlWhole代表匹配全部搜索文本。
                 excelRange.Replace(oldStr, newStr, EXCEL.XlLookAt.xlPart, EXCEL.XlSearchOrder.xlByRows, missing, missing, missing, missing);
             }
 
@@ -1576,18 +1936,20 @@ namespace nsLims_NPOI
         /// <param name="wb">工作簿</param>
         /// <param name="sheetIndex">工作表索引</param>
         /// <param name="startRow">起始行</param>
-        /// <param name="endRow">结束行</param>
         /// <param name="startCol">起始列</param>
         /// <param name="endCol">结束列</param>
-        private static void setAutoRowHeight(EXCEL.Workbook wb, int sheetIndex, int startRow, int endRow, int startCol, int endCol, double updHeight)
+        /// <param name="updHeight">调整行高</param>
+        private static void setAutoRowHeight(EXCEL.Workbook wb, int sheetIndex, int startRow, int startCol, int endCol, double updHeight)
         {
             try
             {
                 object missing = System.Reflection.Missing.Value;
                 EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+                int endRow = sheet.UsedRange.Rows.Count;
 
                 double autoRowheight = 0;
-                for (int i = startRow; i <= endRow; i++)
+                //设置行高时,不应该修改最后一行的"----以下空白-----"行高
+                for (int i = startRow; i < endRow; i++)
                 {
                     //classLims_NPOI.WriteLog("rowIndex:" + i, "");
                     EXCEL.Range row = (EXCEL.Range)sheet.Rows[i];
@@ -1614,10 +1976,10 @@ namespace nsLims_NPOI
         /// <param name="strSourceFile">要修改的excel</param>
         /// <param name="sheetIndex">工作表索引</param>
         /// <param name="startRow">起始行</param>
-        /// <param name="endRow">结束行</param>
         /// <param name="startCol">起始列</param>
         /// <param name="endCol">结束列</param>
-        public static void setAutoRowHeight(string strSourceFile, int sheetIndex, int startRow, int endRow, int startCol, int endCol, double updHeight)
+        /// <param name="updHeight">调整行高</param>
+        public static void setAutoRowHeight(string strSourceFile, int sheetIndex, int startRow, int startCol, int endCol, double updHeight)
         {
             if (File.Exists(strSourceFile))
             {
@@ -1635,7 +1997,7 @@ namespace nsLims_NPOI
                         missing, missing, missing, missing, missing,
                         missing, missing);
 
-                    setAutoRowHeight(workBook, sheetIndex, startRow, endRow, startCol, endCol, updHeight);
+                    setAutoRowHeight(workBook, sheetIndex, startRow, startCol, endCol, updHeight);
                     workBook.Save();
                 }
                 catch (Exception ex)
@@ -1713,6 +2075,159 @@ namespace nsLims_NPOI
             {
                 classLims_NPOI.WriteLog(ex, "");
                 return p;
+            }
+        }
+
+        /// <summary>
+        /// 拉伸表格到A4大小
+        /// </summary>
+        /// <param name="filePath">文件路径</param>
+        /// <param name="sheetIndex"></param>
+        /// <returns></returns>
+        public static void stretchLastRowHeight(string filePath, int sheetIndex)
+        {
+            if (File.Exists(filePath))
+            {
+                object missing = Type.Missing;
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbooks workBooks = null;
+                EXCEL.Workbook workBook = null;
+                try
+                {
+                    excel = new EXCEL.ApplicationClass();
+                    workBooks = excel.Workbooks;
+                    workBook = workBooks.Open(filePath, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing);
+                    stretchLastRowHeight(workBook, sheetIndex);
+                    workBook.Save();
+                }
+                catch (Exception ex)
+                {
+                    classLims_NPOI.WriteLog(ex, "");
+                }
+                finally
+                {
+                    if (workBook != null)
+                    {
+                        workBook.Close(false, missing, missing);
+                        Marshal.ReleaseComObject(workBook);
+                        //Marshal.FinalReleaseComObject(workBook);
+                        workBook = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        Marshal.ReleaseComObject(workBooks);
+                        workBook = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        Marshal.ReleaseComObject(excel);
+                        //Marshal.FinalReleaseComObject(excel);
+                        excel = null;
+
+                        //flag = KillSpecialExcel(excel);
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                }
+            }
+        }
+
+        /// <summary>
+        /// 拉伸表格到A4大小
+        /// </summary>
+        /// <param name="Workbook">excel Workbook对象</param>
+        /// <param name="sheetIndex"></param>
+        /// <returns>是否成功</returns>
+        public static void stretchLastRowHeight(EXCEL.Workbook wb, int sheetIndex)
+        {
+            try
+            {
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+                int endCol = sheet.UsedRange.Columns.Count;
+                int startHeadRow, endHeadRow;
+                int[] iRange = getRepeatingRowsRange(sheet, endCol);
+                if (iRange == null)
+                {
+                    startHeadRow = 0;
+                    endHeadRow = 0;
+                }
+                else
+                {
+                    startHeadRow = iRange[0];
+                    endHeadRow = iRange[1];
+                }
+                List<int> arrRf = getNewPageFirstRow(sheet);
+                int fRow;
+                if (arrRf == null || arrRf.Count == 0)
+                {
+                    fRow = endHeadRow + 1;
+                }
+                else
+                {
+                    fRow = arrRf[arrRf.Count - 1];
+                }
+                double totalH = 0; //总行高
+                                   //高度换算 1厘米＝28.346456692913389磅
+                double headH = 0; //表头高度
+                headH = sheet.PageSetup.TopMargin + sheet.PageSetup.BottomMargin;
+                if (iRange == null)
+                {
+                    headH += 0;
+                }
+                else
+                {
+                    headH += (double)sheet.get_Range(sheet.Cells[iRange[0], iRange[2]], sheet.Cells[iRange[1], iRange[3]]).Height;
+                }
+
+                for (int i = fRow; i <= 65535; i++)
+                {
+                    EXCEL.Range row = (EXCEL.Range)sheet.Rows[i];
+                    if (row == null) continue;
+
+                    double tempH;
+                    if ((bool)((EXCEL.Range)sheet.Rows[i]).Hidden == true)
+                    {
+                        tempH = 0;
+                    }
+                    else
+                    {
+                        tempH = (double)((EXCEL.Range)sheet.Rows[i]).Height;
+                    }
+
+                    if (System.Convert.ToInt32(totalH + tempH) >= System.Convert.ToInt32(PAGE_HEIGHT - (1 * headH)))//超过一页
+                    {
+                        //第一次找到的页尾,就是最后一页的页尾
+
+                        //先合并"----以下空白----"行
+                        int lRow = sheet.UsedRange.Rows.Count;
+                        EXCEL.Range lastMarkRange = sheet.get_Range(sheet.Cells[lRow, 1], sheet.Cells[lRow, endCol]);
+                        lastMarkRange.Merge();
+                        //垂直居上,水平居中
+                        lastMarkRange.VerticalAlignment = XlVAlign.xlVAlignTop;
+                        lastMarkRange.HorizontalAlignment = XlVAlign.xlVAlignCenter;
+
+                        EXCEL.Range lastRange = sheet.get_Range(sheet.Cells[lRow, 1], sheet.Cells[i - 1, endCol]);
+                        //设置边框为外框线
+                        object missing = System.Reflection.Missing.Value;
+                        lastRange.Borders.LineStyle = XlLineStyle.xlLineStyleNone;
+                        lastRange.BorderAround2(XlLineStyle.xlContinuous, EXCEL.XlBorderWeight.xlThin, EXCEL.XlColorIndex.xlColorIndexAutomatic, missing, missing);
+                        break;
+                    }
+                    else
+                    {
+                        totalH = totalH + tempH;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
             }
         }
 
