@@ -34,16 +34,18 @@ namespace nsLims_NPOI
             //ImgConvert ic = new ImgConvert();
             //DocXAction dxa = new DocXAction();
             //MergePDF mpf = new MergePDF();
+            //FileConvertClass fcc = new FileConvertClass();
 
-            object[] o1 = { ")", "）" };
-            object[] o2 = { "(", "（" };
-            object[] o3 = { "%", "％" };
-            object[] o = { o1, o2, o3 };
-            cem.reportOneDimDExcelFormat("D:\\TEST.xls", 1, new int[]{ 1,2,3,8}, 5, 9.25, 1, 8, o);
-
+            classExcelMthd.stretchLastRowHeight("D:\\LK.xls", 1);
             string s = "";
 
             #region 作废的测试代码
+
+            //object[] o1 = { ")", "）" };
+            //object[] o2 = { "(", "（" };
+            //object[] o3 = { "%", "％" };
+            //object[] o = { o1, o2, o3 };
+            //cem.reportOneDimDExcelFormat("D:\\TEST.xls", 1, new int[] { 1, 2, 3, 8 }, 5, 9.25, 1, 8, o);
 
             //mpf.addImageToPdf_Left("D:\\打印版.pdf", "D:\\打印版_new.pdf", "D:\\公司 CMAF川+CNAS.jpg", 93.5, 700.0, 100);
             //mpf.addImageToPdf("D:\\打印版_new.pdf", "D:\\打印版.pdf", "D:\\建设工程专用章.jpg", 120.0, 745, 146.2, "");

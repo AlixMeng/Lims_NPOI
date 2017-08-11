@@ -22,7 +22,7 @@ namespace nsLims_NPOI
         //手动设置的测试总高,使用不同字体会有不同的总高度,此处使用宋体10号字体
         //private static double PAGE_HEIGHT = 820.15;
         //private static double PAGE_HEIGHT = 842;
-        private static double PAGE_HEIGHT = 820.15;
+        private static double PAGE_HEIGHT = 820.03;
         //最后一页的起始行号
         public int lastPageFirstRow;
 
@@ -247,6 +247,132 @@ namespace nsLims_NPOI
                         var imageHeight = image.Height;
                         PicWidth = PicHeight * imageWidth / imageHeight;
                         addImageToSheet(workbookPath, wb, sheetIndex + 1, rangeNameList[i], value, key, PicWidth, PicHeight);
+                        i++;
+                        if (i > rangeNameList.Count)
+                            break;
+                    }
+                    wb.Save();
+                    //strTargetFile = addImageToSheet(workbookPath, wb, sheetIndex + 1, rangeName, imagePath, imgFlag, PicWidth, PicHeight);
+
+                }
+                catch (Exception ex)
+                {
+                    classLims_NPOI.WriteLog(ex, "");
+                    flag = false;
+                }
+                finally
+                {
+                    if (wb != null)
+                    {
+                        //wb.Close(false, missing, false);
+                        wb.Close(false, missing, missing);
+                        int i = Marshal.ReleaseComObject(wb);
+                        wb = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        int i = Marshal.ReleaseComObject(workBooks);
+                        workBooks = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        int i = Marshal.ReleaseComObject(excel);
+                        excel = null;
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                }
+            }
+            catch (Exception e)
+            {
+                classLims_NPOI.WriteLog(e, "");
+                flag = false;
+            }
+            return flag;
+
+        }
+
+        /// <summary>
+        /// 添加图片到指定excel,图片使用原始尺寸,使用office的com组件, 批量添加,
+        ///         图片宽高磅数设为-1时会使用原始尺寸
+        /// </summary>
+        /// <param name="workbookPath">源工作簿路径</param>
+        /// <param name="sheetIndex">工作表sheet索引</param>
+        /// <param name="dArray">图片添加位置标记和图片文件路径数组</param>
+        /// <returns></returns>
+        public bool addImagesToExcel_byOffice(string workbookPath, int sheetIndex, object[] dArray)
+        {
+            bool flag = true;
+            try
+            {
+                if (!File.Exists(workbookPath))
+                {
+                    return false;
+                }
+                //object missing = Type.Missing;
+                object missing = System.Reflection.Missing.Value;
+                List<string> rangeNameList = new List<string>();
+                //按照标记找到位置
+                Dictionary<string, string> dictionary = classLims_NPOI.dArray2Dictionary(dArray);
+                foreach (var oneMapPoint in dictionary)
+                {
+                    string key = oneMapPoint.Key.ToString();
+                    string value = oneMapPoint.Value.ToString();
+                    //按照标记找到range单元格名
+                    string rangeName = new classLims_NPOI().getExcelRangeByFlag(workbookPath, sheetIndex, key);
+                    if (rangeName == null || rangeName == "")
+                    {
+                        rangeNameList.Add("");
+                    }
+                    else
+                    {
+                        rangeNameList.Add(rangeName);
+                    }
+                }
+
+
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbook wb = null;
+                EXCEL.Workbooks workBooks = null;
+                try
+                {
+                    excel = new EXCEL.ApplicationClass();
+                    excel.DisplayAlerts = false;
+                    workBooks = excel.Workbooks;
+                    wb = workBooks.Open(workbookPath, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing);
+                    //实例化Sheet后,释放Excel进程就会失败
+                    //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+                    //按照标记找到位置并插入图片
+                    int i = 0;
+                    foreach (var oneMapPoint in dictionary)
+                    {
+                        string key = oneMapPoint.Key.ToString();
+                        string value = oneMapPoint.Value.ToString();
+
+                        if (rangeNameList[i] == null || rangeNameList[i] == "")
+                        {
+                            classLims_NPOI.WriteLog("标记字符串:" + key + " 未检测到!", "");
+                            i++;
+                            if (i > rangeNameList.Count)
+                                break;
+                            continue;
+                        }
+                        if (value == null || value == "" || !File.Exists(value))
+                        {
+                            classLims_NPOI.WriteLog("签名文件:" + value + " 不存在!", "");
+                            i++;
+                            if (i > rangeNameList.Count)
+                                break;
+                            continue;
+                        }
+
+                        addImageToSheet(workbookPath, wb, sheetIndex + 1, rangeNameList[i], value, key, -1, -1);
                         i++;
                         if (i > rangeNameList.Count)
                             break;
@@ -1487,6 +1613,21 @@ namespace nsLims_NPOI
 
         }
 
+        /// <summary>
+        /// 获取sheet页数,通过垂直分页符个数判断
+        /// </summary>
+        /// <param name="wb"></param>
+        /// <param name="sheetIndex"></param>
+        /// <returns></returns>
+        public static int getSheetPageCount(EXCEL.Workbook wb, int sheetIndex)
+        {
+            EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+
+            var hpb = sheet.HPageBreaks;
+            int hpbCount = sheet.HPageBreaks.Count;
+            return hpbCount + 1;
+
+        }
         //合并检测项目和分析项
         /// <summary>
         /// 合并检测项目和分析项所在列数据,当值相同时

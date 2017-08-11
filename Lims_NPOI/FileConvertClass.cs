@@ -135,11 +135,16 @@ namespace nsLims_NPOI
                             missing, missing, missing, missing, missing,
                             missing, missing);
 
+                    //先使用分页视图打开,EXCEl获取 HPageBreaks 需要在分页视图中
+                    excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
+                    //int hpbCount = classExcelMthd.getSheetPageCount(workBook, 1);
+                    //按照设置好的打印区域发布为pdf
                     workBook.ExportAsFixedFormat(
                         EXCEL.XlFixedFormatType.xlTypePDF,
                         toPath,
-                        EXCEL.XlFixedFormatQuality.xlQualityStandard, false, true, Type.Missing, Type.Missing, false, Type.Missing);
-                    
+                        EXCEL.XlFixedFormatQuality.xlQualityStandard, false, false, Type.Missing, Type.Missing, false, Type.Missing);
+                    //再还原为普通视图
+                    excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
                     flag = true;
                 }
                 catch (Exception exception)
