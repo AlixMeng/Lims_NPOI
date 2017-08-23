@@ -494,7 +494,8 @@ namespace nsLims_NPOI
         /// <param name="wb"></param>
         /// <param name="sheetIndex"></param>
         /// <param name="endCol"></param>
-        public void dealMergedAreaInPages_new(EXCEL.Workbook wb, int sheetIndex, int endCol)
+        /// <param name="colseq">需要合并的列</param>
+        public void dealMergedAreaInPages_new(EXCEL.Workbook wb, int sheetIndex, int endCol, int[] colseq)
         {
             try
             {
@@ -544,7 +545,7 @@ namespace nsLims_NPOI
                         }
                         else if (boforeCellValue.Equals(cellValue))
                         {
-                            dealMergedBetweenPages(sheet, i, maxColIndex);
+                            dealMergedBetweenPages(sheet, i, maxColIndex, colseq);
                         }
                     }
                     //插入分页符
@@ -560,56 +561,75 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// 处理2页之间的合并单元格,上下单独合并
+        /// 处理2页之间的合并单元格,上下单独合并,不需要合并列的列不用处理
         /// </summary>
         /// <param name="sheet">工作表对象</param>
         /// <param name="rowIndex">页首行行号</param>
         /// <param name="endCol">最大行</param>
-        private void dealMergedBetweenPages(EXCEL.Worksheet sheet, int rowIndex, int endCol)
+        /// <param name="colseq">需要合并的列</param>
+        private void dealMergedBetweenPages(EXCEL.Worksheet sheet, int rowIndex, int endCol, int[] colseq)
         {
-            int i = 1;
-            while (i <= endCol)
+            try
             {
-                EXCEL.Range cell = (EXCEL.Range)sheet.Cells[rowIndex, i];
-                if (cell == null) continue;
-                if ((bool)cell.MergeCells)
+                int i = 0;
+                //string s = "";
+                //int[] intt = (int[])colseq;
+                //for (int k = 0; k < intt.Length; k++)
+                //{
+                //    s = s + intt[k].ToString() + ", ";
+                //}
+                //classLims_NPOI.WriteLog("合并列序号:" + s, "");
+                //classLims_NPOI.WriteLog("分页首行行号:" + rowIndex.ToString(), "");
+                while (i < colseq.Length && i <= endCol)
                 {
-                    //classLims_NPOI.WriteLog(
-                    //    "跨页合并处理: 行号:" + rowIndex +
-                    //    "; 列号:" + i, "");
-                    //先拆分再重新合并
-                    int[] mergedArea = getMergedArea(sheet, rowIndex, i, true);
-                    //classLims_NPOI.WriteLog(
-                    //   "合并区域:[" + mergedArea[0] +
-                    //   "," + mergedArea[1] +
-                    //   "," + mergedArea[2] +
-                    //   "," + mergedArea[3] + "]", "");
-                    //合并区域的起始行大于页起始行可不用处理
-                    if (mergedArea[0] >= rowIndex) continue;
-                    //合并上一页,但相等时不合并
-                    if (mergedArea[0] < rowIndex)
+                    //classLims_NPOI.WriteLog("当前I值:" + i.ToString(), "");
+                    EXCEL.Range cell = (EXCEL.Range)sheet.Cells[rowIndex, colseq[i]];
+                    if (cell == null) continue;
+                    if ((bool)cell.MergeCells)
                     {
-                        var mgIndex1 = sheet.get_Range(sheet.Cells[mergedArea[0], mergedArea[1]], sheet.Cells[rowIndex - 1, mergedArea[3]]);
-                        mgIndex1.Merge(Missing.Value);
+                        //classLims_NPOI.WriteLog(
+                        //    "跨页合并处理: 行号:" + rowIndex +
+                        //    "; 列号:" + i, "");
+                        //先拆分再重新合并
+                        int[] mergedArea = getMergedArea(sheet, rowIndex, colseq[i], true);
+                        //classLims_NPOI.WriteLog(
+                        //   "合并区域:[" + mergedArea[0] +
+                        //   "," + mergedArea[1] +
+                        //   "," + mergedArea[2] +
+                        //   "," + mergedArea[3] + "]", "");
+                        //合并区域的起始行大于页起始行可不用处理
+                        if (mergedArea[0] >= rowIndex) continue;
+                        //合并上一页,但相等时不合并
+                        if (mergedArea[0] < rowIndex)
+                        {
+                            var mgIndex1 = sheet.get_Range(sheet.Cells[mergedArea[0], mergedArea[1]], sheet.Cells[rowIndex - 1, mergedArea[3]]);
+                            mgIndex1.Merge(Missing.Value);
+                            //设置边框为全框线
+                            mgIndex1.Borders.LineStyle = 1;
+                        }
+                        //合并下一页
+                        var mgIndex2 = sheet.get_Range(sheet.Cells[rowIndex, mergedArea[1]], sheet.Cells[mergedArea[2], mergedArea[3]]);
+                        mgIndex2.Merge(Missing.Value);
                         //设置边框为全框线
-                        mgIndex1.Borders.LineStyle = 1;
-                    }
-                    //合并下一页
-                    var mgIndex2 = sheet.get_Range(sheet.Cells[rowIndex, mergedArea[1]], sheet.Cells[mergedArea[2], mergedArea[3]]);
-                    mgIndex2.Merge(Missing.Value);
-                    //设置边框为全框线
-                    mgIndex2.Borders.LineStyle = 1;
+                        mgIndex2.Borders.LineStyle = 1;
 
-                    //saveExcelWithoutAsk(filePath, wb);
-                    i = mergedArea[3] + 1;
-                    continue;
-                }
-                else
-                {
-                    i++;
-                    continue;
+                        //saveExcelWithoutAsk(filePath, wb);
+                        //i = mergedArea[3] + 1;
+                        i++;
+                        continue;
+                    }
+                    else
+                    {
+                        i++;
+                        continue;
+                    }
                 }
             }
+            catch (Exception e)
+            {
+                classLims_NPOI.WriteLog(e, "");
+            }
+
 
         }
 
@@ -1276,25 +1296,44 @@ namespace nsLims_NPOI
         /// <returns></returns>
         private static string getMergerCellValue(EXCEL.Worksheet sheet, int row, int col)
         {
-            EXCEL.Range cell = (EXCEL.Range)sheet.Cells[row, col];
-            //EXCEL.Range cell1 = (EXCEL.Range)sheet.Cells[4, 6];
-            if ((bool)cell.MergeCells)
+            try
             {
-                var ma = cell.MergeArea;
-                EXCEL.Range leftTopCell = sheet.get_Range(sheet.Cells[ma.Row, ma.Column], sheet.Cells[ma.Row, ma.Column]);
-                if (leftTopCell == null)
+                //索引超标则记录行列索引
+                int endRow = sheet.UsedRange.Rows.Count;
+                int endCol = sheet.UsedRange.Columns.Count;
+                if (row > endRow || col > endCol)
+                {
+                    string errorMessage = "";
+                    errorMessage += "获取单元格值索引超出范围:[最大行,最大列]=["
+                        + endRow.ToString() + ","+endCol.ToString()+ "]; [实际行,实际列]=[" 
+                        + row.ToString() + "," + col.ToString() + "]";
+                    classLims_NPOI.WriteLog(errorMessage, "");
                     return "";
-                var cv = leftTopCell.Value;
-                if (cv == null)
-                    return "";
-                return cv.ToString();
+                }
+                EXCEL.Range cell = (EXCEL.Range)sheet.Cells[row, col];
+                //EXCEL.Range cell1 = (EXCEL.Range)sheet.Cells[4, 6];
+                if ((bool)cell.MergeCells)
+                {
+                    var ma = cell.MergeArea;
+                    EXCEL.Range leftTopCell = sheet.get_Range(sheet.Cells[ma.Row, ma.Column], sheet.Cells[ma.Row, ma.Column]);
+                    if (leftTopCell == null)
+                        return "";
+                    var cv = leftTopCell.Value;
+                    if (cv == null)
+                        return "";
+                    return cv.ToString();
+                }
+                else
+                {
+                    var cv = cell.Value;
+                    if (cv == null)
+                        return "";
+                    return cv.ToString();
+                }
             }
-            else
-            {
-                var cv = cell.Value;
-                if (cv == null)
-                    return "";
-                return cv.ToString();
+            catch (Exception e) {
+                classLims_NPOI.WriteLog(e, "");
+                return "";
             }
         }
 
@@ -1628,113 +1667,7 @@ namespace nsLims_NPOI
             return hpbCount + 1;
 
         }
-        //合并检测项目和分析项
-        /// <summary>
-        /// 合并检测项目和分析项所在列数据,当值相同时
-        /// </summary>
-        /// <param name="wb"></param>
-        /// <param name="sheetIndex"></param>
-        /// <param name="startRow"></param>
-        /// <param name="maxCol"></param>
-        private void mergeRowTestAndAnalyte(EXCEL.Workbook wb, int sheetIndex, int startRow, int maxCol)
-        {
-            try
-            {
-                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
-                int endRow = sheet.UsedRange.Rows.Count;
-
-                System.Drawing.Point startColPoint = selectPosition(sheet, "检测项目", endRow, maxCol);
-                System.Drawing.Point endColPoint = selectPosition(sheet, "分析项", endRow, maxCol);
-                int startCol = startColPoint.Y;
-                int endCol = endColPoint.Y;
-                //"----以下空白----"的行不用遍历
-                for (int i = startRow; i < endRow; i++)//遍历需要合并的行
-                {
-                    string testValue = getMergerCellValue(sheet, i, startCol);
-                    string analyteValue = getMergerCellValue(sheet, i, endCol);
-                    if (testValue.Equals(analyteValue))//如果相等则之前的列号+1
-                    {
-                        //设置一个合并单元格区域
-                        //获取需要合并的单元格的范围
-                        EXCEL.Range rangeProgram = sheet.get_Range(sheet.Cells[i, startCol], sheet.Cells[i, endCol]);
-                        rangeProgram.Application.DisplayAlerts = false;
-                        rangeProgram.Merge(Missing.Value);
-
-                    }
-                }
-                return;
-            }
-            catch (Exception ex)
-            {
-                classLims_NPOI.WriteLog(ex, "");
-                return;
-            }
-        }
-
-        /// <summary>
-        /// 行合并,按值相等合并
-        /// </summary>
-        /// <param name="wb"></param>
-        /// <param name="sheetIndex"></param>
-        /// <param name="startRow"></param>
-        /// <param name="endRow"></param>
-        /// <param name="endCol"></param>
-        private void mergeRowCells(EXCEL.Workbook wb, int sheetIndex, int startRow, int endRow, int endCol)
-        {
-            try
-            {
-                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
-
-                for (int i = startRow; i <= endRow; i++)//遍历需要合并的行
-                {
-                    #region 检查数值相等并合并当前列
-                    EXCEL.Range tempRow = (EXCEL.Range)sheet.Rows[1];
-                    EXCEL.Range tempCell = (EXCEL.Range)sheet.Cells[i, 1];
-
-                    string tempCellValue = getMergerCellValue(sheet, i, 1);
-                    int tempCol = 1;//最新列号,作为需要合并的起始列
-                    int beforeCol = 1;//之前的列号,作为需要合并的结束列
-                    for (int j = 2; j <= endCol; j++)//遍历列的指定行集合
-                    {
-
-                        EXCEL.Range tempCell1 = (EXCEL.Range)sheet.Cells[i, j];
-                        if (tempCell1 == null) continue;
-                        string nowCellValue = getMergerCellValue(sheet, i, j);
-
-                        if (tempCellValue.Equals(nowCellValue))//如果相等则之前的列号+1
-                        {
-                            beforeCol++;
-
-                        }
-                        else//如果不等则合并记录下的单元格区域,并记录新的列号和单元格值
-                        {
-                            //如果最新列号小于遍历的上一个列号,且单元格值非空
-                            if (tempCol < beforeCol && !tempCellValue.Equals(""))
-                            {
-
-                                //设置一个合并单元格区域
-                                //获取需要合并的单元格的范围
-                                EXCEL.Range rangeProgram = sheet.get_Range(sheet.Cells[i, tempCol], sheet.Cells[i, beforeCol]);
-                                rangeProgram.Application.DisplayAlerts = false;
-                                rangeProgram.Merge(Missing.Value);
-
-                            }
-                            tempCellValue = nowCellValue;//更新单元格值
-                            tempCol = j;
-                            beforeCol++;
-                        }
-                    }
-                    #endregion
-                }
-                return;
-            }
-            catch (Exception ex)
-            {
-                classLims_NPOI.WriteLog(ex, "");
-                return;
-            }
-        }
-
+        
         /// <summary>
         /// 合并指定列,按值相等合并
         /// </summary>
@@ -1870,6 +1803,160 @@ namespace nsLims_NPOI
             }
         }
 
+        
+
+
+        /// <summary>
+        /// 行合并,按值相等合并
+        /// </summary>
+        /// <param name="wb"></param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="startRow"></param>
+        /// <param name="endRow"></param>
+        /// <param name="endCol"></param>
+        private void mergeRowCells(EXCEL.Workbook wb, int sheetIndex, int startRow, int endRow, int endCol)
+        {
+            try
+            {
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+
+                for (int i = startRow; i <= endRow; i++)//遍历需要合并的行
+                {
+                    #region 检查数值相等并合并当前列
+                    EXCEL.Range tempRow = (EXCEL.Range)sheet.Rows[1];
+                    EXCEL.Range tempCell = (EXCEL.Range)sheet.Cells[i, 1];
+
+                    string tempCellValue = getMergerCellValue(sheet, i, 1);
+                    int tempCol = 1;//最新列号,作为需要合并的起始列
+                    int beforeCol = 1;//之前的列号,作为需要合并的结束列
+                    for (int j = 2; j <= endCol; j++)//遍历列的指定行集合
+                    {
+
+                        EXCEL.Range tempCell1 = (EXCEL.Range)sheet.Cells[i, j];
+                        if (tempCell1 == null) continue;
+                        string nowCellValue = getMergerCellValue(sheet, i, j);
+
+                        if (tempCellValue.Equals(nowCellValue))//如果相等则之前的列号+1
+                        {
+                            beforeCol++;
+
+                        }
+                        else//如果不等则合并记录下的单元格区域,并记录新的列号和单元格值
+                        {
+                            //如果最新列号小于遍历的上一个列号,且单元格值非空
+                            if (tempCol < beforeCol && !tempCellValue.Equals(""))
+                            {
+
+                                //设置一个合并单元格区域
+                                //获取需要合并的单元格的范围
+                                EXCEL.Range rangeProgram = sheet.get_Range(sheet.Cells[i, tempCol], sheet.Cells[i, beforeCol]);
+                                rangeProgram.Application.DisplayAlerts = false;
+                                rangeProgram.Merge(Missing.Value);
+
+                            }
+                            tempCellValue = nowCellValue;//更新单元格值
+                            tempCol = j;
+                            beforeCol++;
+                        }
+                    }
+                    #endregion
+                }
+                return;
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return;
+            }
+        }
+
+        /// <summary>
+        /// 行合并,按值相等合并,指定行的列范围
+        /// </summary>
+        /// <param name="wb"></param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="startRow"></param>
+        /// <param name="startCol">起始列索引</param>
+        /// <param name="endCol"></param>
+        /// <param name="unpivotRange">转置标记列</param>
+        /// <param name="unpivotMerge">转置合并标记数组</param>
+        private void mergeRows(EXCEL.Workbook wb, int sheetIndex, int startRow, System.Drawing.Point unpivotRange, int endCol, string[] unpivotMerge)
+        {
+            try
+            {
+                if (unpivotRange.X<1 || unpivotRange.Y<1)
+                {
+                    return;
+
+                }
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+                int endRow = sheet.UsedRange.Rows.Count;
+
+                for (int i = startRow; i <= endRow; i++)//遍历需要合并的行
+                {
+                    //转置标记列必须为1
+                    if ((unpivotMerge.Length> i - startRow) && (unpivotMerge[i- startRow].Equals("1")))
+                    {                        
+                        //设置一个合并单元格区域
+                        //获取需要合并的单元格的范围
+                        EXCEL.Range rangeProgram = sheet.get_Range(sheet.Cells[i, unpivotRange.X], sheet.Cells[i, unpivotRange.Y]);
+                        rangeProgram.Application.DisplayAlerts = false;
+                        rangeProgram.Merge(Missing.Value);
+                    }
+                    
+                }
+                return;
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return;
+            }
+        }
+
+        //合并检测项目和分析项
+        /// <summary>
+        /// 合并检测项目和分析项所在列数据,当值相同时
+        /// </summary>
+        /// <param name="wb"></param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="startRow"></param>
+        /// <param name="maxCol"></param>
+        private void mergeRowTestAndAnalyte(EXCEL.Workbook wb, int sheetIndex, int startRow, int maxCol)
+        {
+            try
+            {
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+                int endRow = sheet.UsedRange.Rows.Count;
+
+                System.Drawing.Point startColPoint = selectPosition(sheet, "检测项目", endRow, maxCol);
+                System.Drawing.Point endColPoint = selectPosition(sheet, "分析项", endRow, maxCol);
+                int startCol = startColPoint.Y;
+                int endCol = endColPoint.Y;
+                //"----以下空白----"的行不用遍历
+                for (int i = startRow; i < endRow; i++)//遍历需要合并的行
+                {
+                    string testValue = getMergerCellValue(sheet, i, startCol);
+                    string analyteValue = getMergerCellValue(sheet, i, endCol);
+                    if (testValue.Equals(analyteValue))//如果相等则之前的列号+1
+                    {
+                        //设置一个合并单元格区域
+                        //获取需要合并的单元格的范围
+                        EXCEL.Range rangeProgram = sheet.get_Range(sheet.Cells[i, startCol], sheet.Cells[i, endCol]);
+                        rangeProgram.Application.DisplayAlerts = false;
+                        rangeProgram.Merge(Missing.Value);
+
+                    }
+                }
+                return;
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return;
+            }
+        }
+
         /// <summary>
         /// 合并检测项目和分析项
         /// </summary>
@@ -1899,13 +1986,14 @@ namespace nsLims_NPOI
 
         //处理报告附页的格式调整
         private void reportOneDimDExcelFormat(EXCEL.Workbook wb, int sheetIndex, int[] colseq, int startRow,
-            double updHeight, int startCol, int endCol, object[] specialChars)
+            double updHeight, int startCol, int endCol, object[] specialChars, System.Drawing.Point unpivotRange, string[] unpivotMerge)
         {
-            ReplaceAll(wb, sheetIndex, specialChars);
+            ReplaceAll(wb, sheetIndex, specialChars);//替换特殊字符
             mergeRowTestAndAnalyte(wb, sheetIndex, startRow, endCol);//合并检测项目和分析项
+            mergeRows(wb, sheetIndex, startRow, unpivotRange, endCol, unpivotMerge); //合并转置列
             mergeCells(wb, sheetIndex, colseq, startRow, endCol);//合并相同检测项目的同列数据
             setAutoRowHeight(wb, sheetIndex, startRow, startCol, endCol, updHeight);//设置行高
-            dealMergedAreaInPages_new(wb, sheetIndex, endCol);//跨页的要分开
+            dealMergedAreaInPages_new(wb, sheetIndex, endCol, colseq);//跨页的要分开,只处理需要合并的列,多实测值模板不拆分实测值的合并
             mergeTestCell(wb, sheetIndex, "检测项目", "分析项", endCol);//合并表头的"检测项目","分析项"2个单元格
             stretchLastRowHeight(wb, sheetIndex);//拉伸最后一行,设置边框位置为页底
         }
@@ -1922,9 +2010,12 @@ namespace nsLims_NPOI
         /// <param name="startCol">起始列</param>
         /// <param name="endCol">结束列</param>
         /// <param name="specialChars">替换字符数组</param>
+        /// <param name="unpivotSeq">转置列列头</param>
+        /// <param name="unpivotRange">转置标记列</param>
+        /// <param name="unpivotMerge">转置合并标记数组</param>
         /// <returns></returns>
         public bool reportOneDimDExcelFormat(string strSourceFile, int sheetIndex, int[] colseq, int startRow,
-            double updHeight, int startCol, int endCol, object[] specialChars)
+            double updHeight, int startCol, int endCol, object[] specialChars, System.Drawing.Point unpivotRange, string[] unpivotMerge)
         {
             bool flag = true;
             if (File.Exists(strSourceFile))
@@ -1945,7 +2036,8 @@ namespace nsLims_NPOI
 
                     //先使用分页视图打开,EXCEl获取 HPageBreaks 需要在分页视图中
                     excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
-                    reportOneDimDExcelFormat(workBook, sheetIndex, colseq, startRow, updHeight, startCol, endCol, specialChars);
+                    reportOneDimDExcelFormat(workBook, sheetIndex, colseq, startRow, 
+                        updHeight, startCol, endCol, specialChars, unpivotRange, unpivotMerge);
                     //再还原为普通视图
                     excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
                     workBook.Save();

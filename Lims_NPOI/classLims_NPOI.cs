@@ -3930,9 +3930,11 @@ namespace nsLims_NPOI
         /// <param name="colListC"></param>
         /// <param name="updHeight">行高的修改量</param>
         /// <param name="specialChars">要替换的特殊字符</param>
+        /// <param name="unpivotHead">转置列列头</param>
+        /// <param name="unpivotMergeMark">转置列是否合并标记,1代表合并,0代表不合并</param>
         /// <returns></returns>
         public Boolean reportOneDimDExcel(string modlePath, int sheetIndex, string targetPath, object[] dArray,
-            object[] colListC, double updHeight, object[] specialChars)
+            object[] colListC, double updHeight, object[] specialChars, object[] unpivotHead, object[] unpivotMergeMark)
         {
             try
             {
@@ -3940,6 +3942,9 @@ namespace nsLims_NPOI
                 ISheet sheet = wb.GetSheetAt(sheetIndex);//获取sheet
                 int[] colseq = getArraySequen(sheet, dArray2String1(colListC), "&[", "]"); //获取合并列列名在模板中的顺序
                 string[] tableHead = dArray2String1((object[])dArray[0]);//最开始的行为表头
+                string[] unpivotHeads = dArray2String1(unpivotHead);//标记位转置的列头
+                int[] unpivotSeq = getArraySequen(sheet, unpivotHeads, "&[", "]"); //获取转置列列名在模板中的顺序
+                string[] unpivotMerge = dArray2String1(unpivotMergeMark);//转置合并标记数组转为string
                 int[] colHeadSeq = getArraySequen(sheet, tableHead, "&[", "]"); //获取表头在模板中的顺序,表头数据无标记符号&[],需要添加
                 object[,] seqArray2 = getSequenArray2(colHeadSeq, dArray2Array2(dArray));//获取排序后的二维数组
                 Dictionary<int, string[]> dic = dArray2ToDictionary2(seqArray2);
@@ -3948,18 +3953,21 @@ namespace nsLims_NPOI
                 int index = arr.IndexOf(0);          //通过indexof函数找到0所在数组中的位置,此处即是表的起始位置
                 string cellPosiValue = tableHead[index];
 
-                int row = selectPosition(sheet, cellPosiValue).X;//起始单元格行号
-                int col = selectPosition(sheet, cellPosiValue).Y; //起始单元格列号
+                int row = selectPosition(sheet, "&[" + cellPosiValue + "]").X;//起始单元格行号
+                int col = selectPosition(sheet, "&[" + cellPosiValue + "]").Y; //起始单元格列号
 
-                //先写入表头
                 string[] arrayTemp = dic[0];
-                for (int j = col; j < col + arrayTemp.Length; j++)
-                {
-                    ICell cell = sheet.GetRow(row).GetCell(j);
-                    if (cell == null)
-                        continue;
-                    cell.SetCellValue(arrayTemp[j - col]);
-                }
+                ////先写入表头
+                //for (int j = col; j < col + arrayTemp.Length; j++)
+                //{
+                //    ICell cell = sheet.GetRow(row).GetCell(j);
+                //    if (cell == null)
+                //        continue;
+                //    cell.SetCellValue(arrayTemp[j - col]);
+                //}                
+                
+                //saveExcelWithoutAsk("D:\\FINAL.xls", wb);
+                //return true;
 
                 for (int i = row + 1; i < row + dic.Count; i++)
                 {
@@ -4005,6 +4013,14 @@ namespace nsLims_NPOI
                         cell.SetCellValue(arrayTemp[j - col]);
                     }
                 }
+                //全部向上移动1行
+                for (int i = row + 1; i <= sheet.LastRowNum; i++)
+                {
+                    sheet.ShiftRows(i, i, -1);
+                }
+                //最后一个空行删除
+                sheet.RemoveRow(sheet.GetRow(sheet.LastRowNum+1));
+
                 sheet.ForceFormulaRecalculation = true;//计算Excel公式
 
                 //刷新后才能计算翻页位置
@@ -4052,8 +4068,32 @@ namespace nsLims_NPOI
                 for (int i = 0; i < colseq.Length; i++) {
                     colseq[i]++;
                 }
+                //使用COM组件时,索引从1开始的
+                for (int i = 0; i < unpivotSeq.Length; i++)
+                {
+                    unpivotSeq[i]++;
+                }
+                Point unpivotRange = new Point();
+                unpivotRange.X = unpivotRange.Y = -1;
+                if (unpivotSeq.Length > 0)
+                {
+                    unpivotRange.X = unpivotRange.Y = unpivotSeq[0];
+                    for (int i = 0; i < unpivotSeq.Length; i++)
+                    {
+                        if (unpivotRange.X > unpivotSeq[i])
+                        {
+                            unpivotRange.X = unpivotSeq[i];
+                        }
+                        if (unpivotRange.Y < unpivotSeq[i])
+                        {
+                            unpivotRange.Y = unpivotSeq[i];
+                        }
+                    }
+                }
                 classExcelMthd cem = new classExcelMthd();
-                cem.reportOneDimDExcelFormat(targetPath, sheetIndex+1, colseq, row+1, updHeight, colRange[0]+1, colRange[1]+1, specialChars);
+                //起始行需要+1
+                cem.reportOneDimDExcelFormat(targetPath, sheetIndex+1, colseq, row+1,
+                    updHeight, colRange[0]+1, colRange[1]+1, specialChars, unpivotRange, unpivotMerge);
 
                 //拉伸最后一行"以下空白"子样
                 //this.lastPageFirstRow = cem.lastPageFirstRow - 1;

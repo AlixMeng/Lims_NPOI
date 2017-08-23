@@ -20,7 +20,20 @@ namespace nsLims_NPOI
         public static void alert(object str)
         {
             string s = str.ToString();
-            MessageBox.Show(s);
+            if (!s.Equals("System.Int32[]"))
+            {
+                MessageBox.Show(s);
+            }
+            else
+            {
+                s = "";
+                int[] intt = (int[])str;
+                for (int i = 0; i < intt.Length; i++)
+                {
+                    s = s + intt[i].ToString() + ", ";
+                }
+                MessageBox.Show(s);
+            }
         }
        
 
@@ -36,10 +49,83 @@ namespace nsLims_NPOI
             //MergePDF mpf = new MergePDF();
             //FileConvertClass fcc = new FileConvertClass();
 
-            classExcelMthd.stretchLastRowHeight("D:\\LK.xls", 1);
+            int[] inttt = new int[] { 1, 2, 3, 8 };
+            alert(inttt);
+            return;
+            object missing = System.Reflection.Missing.Value;
+            string strTargetFile = "";
+            EXCEL.ApplicationClass excel = null;
+            EXCEL.Workbook wb = null;
+            EXCEL.Workbooks workBooks = null;
+            try
+            {
+                excel = new EXCEL.ApplicationClass();
+                excel.DisplayAlerts = false;
+                workBooks = excel.Workbooks;
+                wb = workBooks.Open("D:\\默认附页.xls", missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing);
+                //实例化Sheet后,释放Excel进程就会失败
+                //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+                excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
+                cem.dealMergedAreaInPages_new(wb, 1, 8, new int[] { 1,2,3,8});
+                //再还原为普通视图
+                excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
+                wb.Save();
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+            finally
+            {
+                if (wb != null)
+                {
+                    //wb.Close(false, missing, false);
+                    wb.Close(false, missing, missing);
+                    int i = Marshal.ReleaseComObject(wb);
+                    wb = null;
+                }
+                if (workBooks != null)
+                {
+                    workBooks.Close();
+                    int i = Marshal.ReleaseComObject(workBooks);
+                    workBooks = null;
+                }
+                if (excel != null)
+                {
+                    excel.Quit();
+                    int i = Marshal.ReleaseComObject(excel);
+                    excel = null;
+                }
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+            }
+
+
+
             string s = "";
 
             #region 作废的测试代码
+
+            //object[] o0 = { "序号", "检测项目", "分析项", "样品", "技术要求",
+            //    "单位", "单项结论", "实测值1", "实测值2", "实测值3" };
+            //object[] o1 = { "1", "抗摆锤冲击能", "抗摆锤冲击能", "1#", "0.8",
+            //    "J", "符合", "a", "a", "a" };
+            //object[] o2 = { "2", "耐跌落性（袋）", "耐跌落性（袋）", "1#", "无渗漏，无破裂",
+            //    "----", "合格", "c", "d", "e" };
+            //object[] o3 = { "3", "甲苯二胺（4%乙酸）", "甲苯二胺（4%乙酸）", "1#", "≤0.004",
+            //    "mg/L", "合格", "未检出", "未检出", "未检出" };
+            //object[] o = { o0, o1, o2, o3 };
+            //object[] colListC = { "检测项目", "单位", "单项结论" };
+            //object[] sc1 = { ";", "；" };
+            //object[] sc2 = { "≦", "≤" };
+            //object[] sc = { sc1, sc2 };
+            //object[] unpH = { };
+            //object[] mergeMark = { "1", "0" };
+            //cln.reportOneDimDExcel("D:\\3实测值红黄蓝.xls", 0, "D:\\3实测值红黄蓝.xls", o, colListC, 9.25, sc, unpH, mergeMark);
 
             //object[] o1 = { ")", "）" };
             //object[] o2 = { "(", "（" };
