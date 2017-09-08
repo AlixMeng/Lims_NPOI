@@ -534,19 +534,20 @@ namespace nsLims_NPOI
 
                     if (i <= endRow && i > p.X)
                     {
-                        //如果检测项目相等,则拆分
-                        //EXCEL.Range cell = (EXCEL.Range)sheet.Cells[n, testNoIndex];
-                        //EXCEL.Range beforeCell = (EXCEL.Range)sheet.Cells[n-1, testNoIndex];
-                        string boforeCellValue = getMergerCellValue(sheet, i - 1, testNoIndex);
-                        string cellValue = getMergerCellValue(sheet, i, testNoIndex);
-                        if (boforeCellValue.Equals("") || cellValue.Equals(""))
-                        {
-                            ;
-                        }
-                        else if (boforeCellValue.Equals(cellValue))
-                        {
-                            dealMergedBetweenPages(sheet, i, maxColIndex, colseq);
-                        }
+                        #region 不能按照检测项目相等判断是否合并, 因为不同检测项目前可能是相同的子样名称
+                        ////如果检测项目相等,则拆分
+                        //string boforeCellValue = getMergerCellValue(sheet, i - 1, testNoIndex);
+                        //string cellValue = getMergerCellValue(sheet, i, testNoIndex);
+                        //if (boforeCellValue.Equals("") || cellValue.Equals(""))
+                        //{
+                        //    ;
+                        //}
+                        //else if (boforeCellValue.Equals(cellValue))
+                        //{
+                        //    dealMergedBetweenPages(sheet, i, maxColIndex, colseq);
+                        //}
+                        #endregion
+                        dealMergedBetweenPages(sheet, i, maxColIndex, colseq);
                     }
                     //插入分页符
                     //((EXCEL.Range)sheet.Rows[20]).PageBreak = 1;
@@ -572,14 +573,6 @@ namespace nsLims_NPOI
             try
             {
                 int i = 0;
-                //string s = "";
-                //int[] intt = (int[])colseq;
-                //for (int k = 0; k < intt.Length; k++)
-                //{
-                //    s = s + intt[k].ToString() + ", ";
-                //}
-                //classLims_NPOI.WriteLog("合并列序号:" + s, "");
-                //classLims_NPOI.WriteLog("分页首行行号:" + rowIndex.ToString(), "");
                 while (i < colseq.Length && i <= endCol)
                 {
                     //classLims_NPOI.WriteLog("当前I值:" + i.ToString(), "");
@@ -587,36 +580,64 @@ namespace nsLims_NPOI
                     if (cell == null) continue;
                     if ((bool)cell.MergeCells)
                     {
-                        //classLims_NPOI.WriteLog(
-                        //    "跨页合并处理: 行号:" + rowIndex +
-                        //    "; 列号:" + i, "");
-                        //先拆分再重新合并
-                        int[] mergedArea = getMergedArea(sheet, rowIndex, colseq[i], true);
-                        //classLims_NPOI.WriteLog(
-                        //   "合并区域:[" + mergedArea[0] +
-                        //   "," + mergedArea[1] +
-                        //   "," + mergedArea[2] +
-                        //   "," + mergedArea[3] + "]", "");
+                        
+                        //先获取合并区域,不拆分,需要处理跨页再拆分
+                        int[] mergedArea = getMergedArea(sheet, rowIndex, colseq[i], false);
+
                         //合并区域的起始行大于页起始行可不用处理
-                        if (mergedArea[0] >= rowIndex) continue;
-                        //合并上一页,但相等时不合并
-                        if (mergedArea[0] < rowIndex)
+                        if (mergedArea[0] >= rowIndex)
                         {
+                            //不跨页处理的不用拆分
+                            i++;
+                            continue;
+                        }
+                        else
+                        {
+                            //获取合并区域的值,拆分合并后需要重新赋值
+                            var cellValue = getMergerCellValue(sheet, rowIndex, colseq[i]);
+                            
+                            //此处代表需要跨页拆分
+                            var mgIndexT = sheet.get_Range(sheet.Cells[mergedArea[0], mergedArea[1]], sheet.Cells[mergedArea[2], mergedArea[3]]);
+                            mgIndexT.UnMerge();
+                            mgIndexT.Value = cellValue;//拆分后必须重设所有合并区域值,否则多出的单元格将为空
+
+
+                            //合并上一页
                             var mgIndex1 = sheet.get_Range(sheet.Cells[mergedArea[0], mergedArea[1]], sheet.Cells[rowIndex - 1, mergedArea[3]]);
                             mgIndex1.Merge(Missing.Value);
                             //设置边框为全框线
                             mgIndex1.Borders.LineStyle = 1;
-                        }
-                        //合并下一页
-                        var mgIndex2 = sheet.get_Range(sheet.Cells[rowIndex, mergedArea[1]], sheet.Cells[mergedArea[2], mergedArea[3]]);
-                        mgIndex2.Merge(Missing.Value);
-                        //设置边框为全框线
-                        mgIndex2.Borders.LineStyle = 1;
 
-                        //saveExcelWithoutAsk(filePath, wb);
-                        //i = mergedArea[3] + 1;
-                        i++;
-                        continue;
+                            //合并下一页
+                            var mgIndex2 = sheet.get_Range(sheet.Cells[rowIndex, mergedArea[1]], sheet.Cells[mergedArea[2], mergedArea[3]]);
+                            mgIndex2.Merge(Missing.Value);
+                            //设置边框为全框线
+                            mgIndex2.Borders.LineStyle = 1;
+
+                            #region 应该跳到合并区域之外,
+                            //检查合并区域的结束列,找到比它大的第一个合并列数组索引
+                            bool jump = false;//是否跳过
+                            for (int j = i + 1; j < colseq.Length; j++)
+                            {
+                                //mergedArea[3]
+                                if (colseq[j] > mergedArea[3])
+                                {
+                                    i = j;
+                                    jump = true;
+                                    break;
+                                }
+                            }
+                            if (jump == true)
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                i++;
+                                continue;
+                            }
+                            #endregion
+                        }
                     }
                     else
                     {
@@ -1149,10 +1170,9 @@ namespace nsLims_NPOI
         /// <summary>
         /// 获得单元格的合并区域, 起始行, 起始列, 结束行, 结束列
         /// </summary>
-        /// <param name="wb"></param>
-        /// <param name="sheetIndex"></param>
-        /// <param name="nRow"></param>
-        /// <param name="nCol"></param>
+        /// <param name="sheet">工作表</param>
+        /// <param name="nRow">行索引</param>
+        /// <param name="nCol">列索引</param>
         /// <param name="isUnMegre">是否取消合并</param>
         /// <returns></returns>
         public static int[] getMergedArea(EXCEL.Worksheet sheet, int nRow, int nCol, bool isUnMegre)
@@ -1305,7 +1325,7 @@ namespace nsLims_NPOI
                 {
                     string errorMessage = "";
                     errorMessage += "获取单元格值索引超出范围:[最大行,最大列]=["
-                        + endRow.ToString() + ","+endCol.ToString()+ "]; [实际行,实际列]=[" 
+                        + endRow.ToString() + "," + endCol.ToString() + "]; [实际行,实际列]=["
                         + row.ToString() + "," + col.ToString() + "]";
                     classLims_NPOI.WriteLog(errorMessage, "");
                     return "";
@@ -1331,7 +1351,8 @@ namespace nsLims_NPOI
                     return cv.ToString();
                 }
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
                 classLims_NPOI.WriteLog(e, "");
                 return "";
             }
@@ -1463,13 +1484,10 @@ namespace nsLims_NPOI
             List<int> arrayFr = new List<int>();
             try
             {
-                //EXCEL.Range range = sheet.Range["A47"];
-                //var value = getMergerCellValue(sheet, 47, 1);
                 //获取默认行分页符集合
-                var hpb = sheet.HPageBreaks;
-                int hpbCount = sheet.HPageBreaks.Count;
+                EXCEL.HPageBreaks hpb = sheet.HPageBreaks;
 
-                for (int i = 1; i <= hpbCount; i++)
+                for (int i = 1; i <= hpb.Count; i++)
                 {
                     var hPageBreak = hpb[i];
                     if (hPageBreak != null)
@@ -1667,7 +1685,7 @@ namespace nsLims_NPOI
             return hpbCount + 1;
 
         }
-        
+
         /// <summary>
         /// 合并指定列,按值相等合并
         /// </summary>
@@ -1705,10 +1723,18 @@ namespace nsLims_NPOI
                         string nowTESTNO = getMergerCellValue(sheet, j, TESTNO_colIndex);
 
                         //如果相等则之前的行号+1,需要根据检测项相等判定合并
-                        if (tempCellValue.Equals(nowCellValue) && tempTESTNO.Equals(nowTESTNO))
+                        //除序号列外,在检测项目之前的列不用考虑检测项目是否相等再合并
+                        if (colList[i] > 1 && colList[i] < TESTNO_colIndex && tempCellValue.Equals(nowCellValue))
                         {
+                            //classLims_NPOI.WriteLog("当前索引" + colList[i].ToString(), "");
+                            //classLims_NPOI.WriteLog("当前值"+ nowCellValue, "");
                             beforeRow++;
 
+                        }
+                        //序号和检测项目之后的列,要按照先判断项目是否相等
+                        else if (tempCellValue.Equals(nowCellValue) && tempTESTNO.Equals(nowTESTNO))
+                        {
+                            beforeRow++;
                         }
                         else//如果不等则合并记录下的单元格区域,并记录新的行号和单元格值
                         {
@@ -1803,7 +1829,7 @@ namespace nsLims_NPOI
             }
         }
 
-        
+
 
 
         /// <summary>
@@ -1884,7 +1910,7 @@ namespace nsLims_NPOI
         {
             try
             {
-                if (unpivotRange.X<1 || unpivotRange.Y<1)
+                if (unpivotRange.X < 1 || unpivotRange.Y < 1)
                 {
                     return;
 
@@ -1895,15 +1921,15 @@ namespace nsLims_NPOI
                 for (int i = startRow; i <= endRow; i++)//遍历需要合并的行
                 {
                     //转置标记列必须为1
-                    if ((unpivotMerge.Length> i - startRow) && (unpivotMerge[i- startRow].Equals("1")))
-                    {                        
+                    if ((unpivotMerge.Length > i - startRow) && (unpivotMerge[i - startRow].Equals("1")))
+                    {
                         //设置一个合并单元格区域
                         //获取需要合并的单元格的范围
                         EXCEL.Range rangeProgram = sheet.get_Range(sheet.Cells[i, unpivotRange.X], sheet.Cells[i, unpivotRange.Y]);
                         rangeProgram.Application.DisplayAlerts = false;
                         rangeProgram.Merge(Missing.Value);
                     }
-                    
+
                 }
                 return;
             }
@@ -2036,7 +2062,7 @@ namespace nsLims_NPOI
 
                     //先使用分页视图打开,EXCEl获取 HPageBreaks 需要在分页视图中
                     excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
-                    reportOneDimDExcelFormat(workBook, sheetIndex, colseq, startRow, 
+                    reportOneDimDExcelFormat(workBook, sheetIndex, colseq, startRow,
                         updHeight, startCol, endCol, specialChars, unpivotRange, unpivotMerge);
                     //再还原为普通视图
                     excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
@@ -2171,7 +2197,7 @@ namespace nsLims_NPOI
         /// <param name="startRow">起始行</param>
         /// <param name="startCol">起始列</param>
         /// <param name="endCol">结束列</param>
-        /// <param name="updHeight">调整行高</param>
+        /// <param name="updHeight">调整行高,百分比, 20代表增加20%</param>
         private static void setAutoRowHeight(EXCEL.Workbook wb, int sheetIndex, int startRow, int startCol, int endCol, double updHeight)
         {
             try
@@ -2190,7 +2216,10 @@ namespace nsLims_NPOI
                     //classLims_NPOI.WriteLog("获取行高:" + autoRowheight + "; 偏移行高:" + updHeight, "");
                     if (autoRowheight > 0)
                     {
-                        double sumRowHeight = autoRowheight + updHeight;
+                        //计算百分比缩放行高
+                        double sumRowHeight = autoRowheight * (updHeight + 100) / 100;
+                        if (sumRowHeight > 409) sumRowHeight = 409;
+                        //double sumRowHeight = autoRowheight + updHeight;
                         row.RowHeight = sumRowHeight;
                         //classLims_NPOI.WriteLog("success:" + i, "");
                     }

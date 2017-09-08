@@ -603,7 +603,7 @@ namespace nsLims_NPOI
                 return null;
             }
 
-            Picture pic = img.CreatePicture();
+            Novacode.Picture pic = img.CreatePicture();
 
             //p.AppendPicture(pic);
             p.InsertPicture(pic);

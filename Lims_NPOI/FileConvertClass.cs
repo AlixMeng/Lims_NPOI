@@ -142,7 +142,13 @@ namespace nsLims_NPOI
                     workBook.ExportAsFixedFormat(
                         EXCEL.XlFixedFormatType.xlTypePDF,
                         toPath,
-                        EXCEL.XlFixedFormatQuality.xlQualityStandard, false, false, Type.Missing, Type.Missing, false, Type.Missing);
+                        EXCEL.XlFixedFormatQuality.xlQualityStandard,//可设置为 xlQualityStandard 或 xlQualityMinimum。
+                        true,//包含文档属性
+                        false, //如果设置为 True，则忽略在发布时设置的任何打印区域。如果设置为 False，则使用在发布时设置的打印区域。
+                        Type.Missing,//发布的起始页码。如果省略此参数，则从起始位置开始发布。
+                        Type.Missing,//发布的终止页码。如果省略此参数，则发布至最后一页。
+                        false, //是否发布文件后在查看器中显示文件。
+                        Type.Missing);
                     //再还原为普通视图
                     excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
                     flag = true;
@@ -276,6 +282,11 @@ namespace nsLims_NPOI
                 {
                     flag = false;
                     throw new Exception("需要转换的源文件路径不能为空。");
+                }
+                if ( !File.Exists(fromWordPath) )
+                {
+                    flag = false;
+                    throw new Exception("需要转换的源文件不存在。");
                 }
                 if (toPath.Length == 0)
                 {

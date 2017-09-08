@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using NPOI.SS.UserModel;
@@ -49,66 +50,66 @@ namespace nsLims_NPOI
             //MergePDF mpf = new MergePDF();
             //FileConvertClass fcc = new FileConvertClass();
 
-            int[] inttt = new int[] { 1, 2, 3, 8 };
-            alert(inttt);
-            return;
-            object missing = System.Reflection.Missing.Value;
-            string strTargetFile = "";
-            EXCEL.ApplicationClass excel = null;
-            EXCEL.Workbook wb = null;
-            EXCEL.Workbooks workBooks = null;
-            try
-            {
-                excel = new EXCEL.ApplicationClass();
-                excel.DisplayAlerts = false;
-                workBooks = excel.Workbooks;
-                wb = workBooks.Open("D:\\默认附页.xls", missing, missing,
-                    missing, missing, missing, missing, missing,
-                    missing, missing, missing, missing, missing,
-                    missing, missing);
-                //实例化Sheet后,释放Excel进程就会失败
-                //对于sheet的操作必须放在新的方法中,接口层级为Workbook
-                excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
-                cem.dealMergedAreaInPages_new(wb, 1, 8, new int[] { 1,2,3,8});
-                //再还原为普通视图
-                excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
-                wb.Save();
-            }
-            catch (Exception ex)
-            {
-                classLims_NPOI.WriteLog(ex, "");
-            }
-            finally
-            {
-                if (wb != null)
-                {
-                    //wb.Close(false, missing, false);
-                    wb.Close(false, missing, missing);
-                    int i = Marshal.ReleaseComObject(wb);
-                    wb = null;
-                }
-                if (workBooks != null)
-                {
-                    workBooks.Close();
-                    int i = Marshal.ReleaseComObject(workBooks);
-                    workBooks = null;
-                }
-                if (excel != null)
-                {
-                    excel.Quit();
-                    int i = Marshal.ReleaseComObject(excel);
-                    excel = null;
-                }
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
+            var sqrt = System.Math.Sqrt(24);
+            alert(sqrt);
 
-            }
+            //int[] inttt = new int[] { 1, 2, 3, 4, 8 };
+            //object missing = System.Reflection.Missing.Value;
+            //EXCEL.ApplicationClass excel = null;
+            //EXCEL.Workbook wb = null;
+            //EXCEL.Workbooks workBooks = null;
+            //try
+            //{
+            //    excel = new EXCEL.ApplicationClass();
+            //    excel.DisplayAlerts = false;
+            //    workBooks = excel.Workbooks;
+            //    wb = workBooks.Open("D:\\test.xls", missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing);
+            //    //实例化Sheet后,释放Excel进程就会失败
+            //    //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+            //    excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
+            //    cem.dealMergedAreaInPages_new(wb, 1, 8, inttt);
+            //    //再还原为普通视图
+            //    excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
+            //    wb.Save();
+            //}
+            //catch (Exception ex)
+            //{
+            //    classLims_NPOI.WriteLog(ex, "");
+            //}
+            //finally
+            //{
+            //    if (wb != null)
+            //    {
+            //        //wb.Close(false, missing, false);
+            //        wb.Close(false, missing, missing);
+            //        int i = Marshal.ReleaseComObject(wb);
+            //        wb = null;
+            //    }
+            //    if (workBooks != null)
+            //    {
+            //        workBooks.Close();
+            //        int i = Marshal.ReleaseComObject(workBooks);
+            //        workBooks = null;
+            //    }
+            //    if (excel != null)
+            //    {
+            //        excel.Quit();
+            //        int i = Marshal.ReleaseComObject(excel);
+            //        excel = null;
+            //    }
+            //    GC.Collect();
+            //    GC.WaitForPendingFinalizers();
 
-
+            //}
 
             string s = "";
 
             #region 作废的测试代码
+
+            
 
             //object[] o0 = { "序号", "检测项目", "分析项", "样品", "技术要求",
             //    "单位", "单项结论", "实测值1", "实测值2", "实测值3" };
