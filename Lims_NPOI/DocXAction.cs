@@ -613,6 +613,50 @@ namespace nsLims_NPOI
             return pic;
         }
 
+        //added by LIUJIE 2017-09-18
+        /// <summary>
+        /// 插入图片及图片注释（对图片尺寸没有要求）
+        /// </summary>
+        /// <param name="oldPath">添加的doc路径</param>
+        /// <param name="imagePath">添加图片的数组</param>
+        /// <param name="replaceFlag">替换符</param>
+        /// <param name="remark">图片备注数组</param>
+        public void AddWordPic(string oldPath, object[] oPath, string replaceFlag, object[] oRemark)
+        {
+            DocX oldDocument = DocX.Load(oldPath);
+            Paragraph ss = null;
+            Novacode.Image img = null;
+            ss = GetParagraphByReplaceFlag(oldDocument, replaceFlag, "CENTER");
+            ss.ReplaceText(replaceFlag, "");
+            if (!(oPath == null || oRemark == null))
+            {
+                try
+                {
+                    string[] imagePath = classLims_NPOI.dArray2String1(oPath);
+                    string[] remark = classLims_NPOI.dArray2String1(oRemark);
+                    for (int i = 0; i < imagePath.Length; i++)
+                    {
+                        img = oldDocument.AddImage(imagePath[i]);
+                        Picture pic = img.CreatePicture();
+                        ss.AppendPicture(pic);
+                        pic.Height = Convert.ToInt32(Convert.ToDouble(pic.Height) / Convert.ToDouble(pic.Width) * Convert.ToDouble(oldDocument.PageWidth));
+                        pic.Width = Convert.ToInt32(Convert.ToDouble(oldDocument.PageWidth));
+                        ss.AppendLine(remark[i] + "\n");
+                        //ss.AppendLine("\n");
+                        ss.Alignment = Alignment.center;
+                    }
+                }
+                catch (System.InvalidOperationException e)
+                {
+                    classLims_NPOI.WriteLog(e, "");
+                    return;
+                }
+            }
+            oldDocument.Save();
+            return;
+        }
+
+
         #endregion
 
     }

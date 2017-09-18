@@ -5,7 +5,7 @@ using EXCEL = Microsoft.Office.Interop.Excel;
 using WORD = Microsoft.Office.Interop.Word;
 using Microsoft.Office.Interop.Word;
 using System.Reflection;
-using Microsoft.VisualBasic.Devices;
+using novapiLib80;
 
 namespace nsLims_NPOI
 {
@@ -15,6 +15,11 @@ namespace nsLims_NPOI
     /// </summary>
     class FileConvertClass
     {
+
+        public void novaFunc()
+        {
+            NovaPdfOptions80Class np8 = new NovaPdfOptions80Class();
+        }
 
         #region 把指定EXCEL转换成PDF
         /// <summary>
@@ -189,6 +194,81 @@ namespace nsLims_NPOI
         }
 
 
+        public bool ExcelWorkbookPrintToPDF(string fromExcelPath, string toPath)
+        {
+            bool flag = false;
+            if (File.Exists(fromExcelPath))
+            {
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbook workBook = null;
+                EXCEL.Workbooks workBooks = null;
+                object missing = Type.Missing;
+                try
+                {
+                    if (fromExcelPath.Length == 0)
+                    {
+                        flag = false;
+                        throw new Exception("需要转换的源文件路径不能为空。");
+                    }
+                    if (toPath.Length == 0)
+                    {
+                        flag = false;
+                        throw new Exception("需要转换的目标文件路径不能为空。");
+                    }
+
+                    excel = new EXCEL.ApplicationClass();
+                    workBooks = excel.Workbooks;
+                    Type type = workBooks.GetType();
+                    workBook = workBooks.Open(fromExcelPath, missing, true,
+                            missing, missing, missing, missing, missing,
+                            missing, missing, missing, missing, missing,
+                            missing, missing);
+
+                    //先使用分页视图打开,EXCEl获取 HPageBreaks 需要在分页视图中
+                    excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
+                    //int hpbCount = classExcelMthd.getSheetPageCount(workBook, 1);
+                    //按照设置好的打印区域发布为pdf
+                    workBook.PrintOutEx(missing, missing, missing, false, missing,
+                        true, false, "ZZY", true);
+                    //再还原为普通视图
+                    excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
+                    flag = true;
+                }
+                catch (Exception exception)
+                {
+                    classLims_NPOI.WriteLog(exception, "");
+                    flag = false;
+                }
+                finally
+                {
+                    if (workBook != null)
+                    {
+                        workBook.Close(false, missing, missing);
+                        Marshal.ReleaseComObject(workBook);
+                        //Marshal.FinalReleaseComObject(workBook);
+                        workBook = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        Marshal.ReleaseComObject(workBooks);
+                        workBook = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        Marshal.ReleaseComObject(excel);
+                        //Marshal.FinalReleaseComObject(excel);
+                        excel = null;
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                }
+            }
+            return flag;
+
+        }
+
         #endregion
 
         #region 结束EXCEL.EXE进程的方法
@@ -307,19 +387,30 @@ namespace nsLims_NPOI
                 //打开要打印的文件
                 doc = applicationClass.Documents.Open(
                     fromWordPath,
+                    ref oFalse, //如果该属性为 True，则当文件不是 Microsoft Word 格式时，将显示“转换文件”对话框。
+                    ref oTrue, //如果该属性值为 True，则以只读方式打开文档。
+                    ref oFalse,//如果该属性值为 True，则将文件名添加到“文件”菜单底部最近使用过的文件列表中
+                    ref oMissing, 
                     ref oMissing,
-                    ref oTrue,
-                    ref oFalse,
-                    ref oMissing, ref oMissing, ref oMissing, ref oMissing, ref oMissing, ref oMissing, ref oMissing, ref oMissing,
-                    ref oMissing, ref oMissing, ref oMissing, ref oMissing);
+                    ref oFalse, //控制当 FileName 是一篇打开的文档的名称时应采取的操作。如果该属性值为 True，则放弃对打开文档进行的所有尚未保存的更改，并将重新打开该文件。如果该属性值为 False，则激活打开的文档。
+                    ref oMissing, ref oMissing,
+                    ref oMissing, ref oMissing, ref oMissing,
+                    ref oMissing, ref oMissing, 
+                    ref oMissing, ref oMissing);
 
                 doc.ExportAsFixedFormat(
                     toPath,
                     WdExportFormat.wdExportFormatPDF,
                     false,
-                    WdExportOptimizeFor.wdExportOptimizeForPrint, WdExportRange.wdExportAllDocument, 1, 1,
-                    WORD.WdExportItem.wdExportDocumentWithMarkup, false, false, WdExportCreateBookmarks.wdExportCreateNoBookmarks,
-                    true, false, false, oMissing);
+                    WdExportOptimizeFor.wdExportOptimizeForPrint,//指定进行屏幕优化还是打印优化。
+                    WdExportRange.wdExportAllDocument, 1, 1,
+                    WORD.WdExportItem.wdExportDocumentContent,//指定导出过程是仅包括文本，还是同时包括文本和标记。
+                    true,// 如果要在新文件中包含文档属性，则为 true；否则为 false。
+                    false,// 如果要在源文档具有信息权限管理 (IRM) 保护时将 IRM 权限复制到 XPS 文档，则为 true；否则为 false。 默认值为 true。 
+                    WdExportCreateBookmarks.wdExportCreateNoBookmarks,
+                    false,// 如果要包含额外数据（如有关内容的流和逻辑组织的信息）来协助使用屏幕读取器，则为 true；否则为 false。 默认值为 true。 
+                    true,// 如果要包含文本的位图，则为 true；如果要引用文本字体，则为 false。 如果字体许可证不允许在 PDF 文件中嵌入某种字体，则将此参数设置为 true。 如果将此参数设置为 false，则当指定字体不可用时，查看者的计算机会替换合适的字体。 默认值为 true。 
+                    false, oMissing);
 
                 flag = true;
             }
@@ -334,6 +425,7 @@ namespace nsLims_NPOI
                 {
                     //关闭WORD文件
                     ((WORD._Document)doc).Close(WORD.WdSaveOptions.wdDoNotSaveChanges, Missing.Value, Missing.Value);
+
                     doc = null;
                 }
                 if (applicationClass != null)

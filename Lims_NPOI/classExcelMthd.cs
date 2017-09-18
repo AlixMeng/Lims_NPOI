@@ -22,7 +22,9 @@ namespace nsLims_NPOI
         //手动设置的测试总高,使用不同字体会有不同的总高度,此处使用宋体10号字体
         //private static double PAGE_HEIGHT = 820.15;
         //private static double PAGE_HEIGHT = 842;
-        private static double PAGE_HEIGHT = 820.03;
+        //private static double PAGE_HEIGHT = 820.03;
+        //private static double PAGE_HEIGHT = 816;
+        private static double PAGE_HEIGHT = 816;
         //最后一页的起始行号
         public int lastPageFirstRow;
 
@@ -2197,8 +2199,8 @@ namespace nsLims_NPOI
         /// <param name="startRow">起始行</param>
         /// <param name="startCol">起始列</param>
         /// <param name="endCol">结束列</param>
-        /// <param name="updHeight">调整行高,百分比, 20代表增加20%</param>
-        private static void setAutoRowHeight(EXCEL.Workbook wb, int sheetIndex, int startRow, int startCol, int endCol, double updHeight)
+        /// <param name="updHeight">调整行高,根号倍数放大行高, 20代表增加20%倍根号(原行高)</param>
+        public static void setAutoRowHeight(EXCEL.Workbook wb, int sheetIndex, int startRow, int startCol, int endCol, double updHeight)
         {
             try
             {
@@ -2216,8 +2218,8 @@ namespace nsLims_NPOI
                     //classLims_NPOI.WriteLog("获取行高:" + autoRowheight + "; 偏移行高:" + updHeight, "");
                     if (autoRowheight > 0)
                     {
-                        //计算百分比缩放行高
-                        double sumRowHeight = autoRowheight * (updHeight + 100) / 100;
+                        //根号倍数放大行高
+                        double sumRowHeight = autoRowheight + (updHeight*Math.Sqrt(autoRowheight)/100);
                         if (sumRowHeight > 409) sumRowHeight = 409;
                         //double sumRowHeight = autoRowheight + updHeight;
                         row.RowHeight = sumRowHeight;
