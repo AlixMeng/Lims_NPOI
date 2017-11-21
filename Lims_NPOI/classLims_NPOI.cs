@@ -102,45 +102,45 @@ namespace nsLims_NPOI
         }
 
         #region 禁止使用"C12"作为单元格坐标
-        ////返回字符串部分
-        ///// <summary>
-        ///// 返回字符串部分
-        ///// </summary>
-        ///// <param name="s">Excel坐标,如B23</param>
-        ///// <returns>坐标的字符串部分,实际为列号,如B23返回B</returns>
-        //public static string disassemblyToString(string s)
-        //{
-        //    if (string.IsNullOrEmpty(s)) return "";
-        //    int n = 0;
-        //    for (int i = s.Length - 1; i >= 0; i--)
-        //    {
-        //        char c = Char.ToUpper(s[i]);
-        //        if (c < 'A' || c > 'Z') n = i;
-        //    }
-        //    return s.Substring(0, n);
-        //}
+        //返回字符串部分
+        /// <summary>
+        /// 返回字符串部分
+        /// </summary>
+        /// <param name="s">Excel坐标,如B23</param>
+        /// <returns>坐标的字符串部分,实际为列号,如B23返回B</returns>
+        public static string disassemblyToString(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            int n = 0;
+            for (int i = s.Length - 1; i >= 0; i--)
+            {
+                char c = Char.ToUpper(s[i]);
+                if (c < 'A' || c > 'Z') n = i;
+            }
+            return s.Substring(0, n);
+        }
 
-        ////返回数值部分
-        ///// <summary>
-        ///// 返回数值部分
-        ///// </summary>
-        ///// <param name="s">Excel坐标,如B23</param>
-        ///// <returns>坐标的字符串部分,实际为列号,如B23返回23</returns>
-        //public static int disassemblyToNumber(string s)
-        //{
-        //    if (string.IsNullOrEmpty(s)) return 0;
-        //    int n = 0;
-        //    for (int i = 0; i < s.Length; i++)
-        //    {
-        //        char c = Char.ToUpper(s[i]);
-        //        if (c >= '0' && c <= '9')
-        //        {
-        //            n = i;
-        //            break;
-        //        }
-        //    }
-        //    return int.Parse(s.Substring(n));
-        //}
+        //返回数值部分
+        /// <summary>
+        /// 返回数值部分
+        /// </summary>
+        /// <param name="s">Excel坐标,如B23</param>
+        /// <returns>坐标的字符串部分,实际为列号,如B23返回23</returns>
+        public static int disassemblyToNumber(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return 0;
+            int n = 0;
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = Char.ToUpper(s[i]);
+                if (c >= '0' && c <= '9')
+                {
+                    n = i;
+                    break;
+                }
+            }
+            return int.Parse(s.Substring(n));
+        }
         #endregion
 
 
@@ -2326,54 +2326,110 @@ namespace nsLims_NPOI
 
 
         #region 废弃使用"C12"作为单元格坐标
-        ////填写数据到excel,根据单元格坐标
-        ////Dictionary的key为坐标(如"C3"),value为值
-        ///// <summary>
-        ///// 填写数据到excel,根据单元格坐标.Dictionary的key为坐标(如"C3"),value为值
-        ///// </summary>
-        ///// <param name="sourceExcelPath">源工作簿文件路径</param>
-        ///// <param name="targetExcelPath">目标工作簿文件路径</param>
-        ///// <param name="map">Dictionary数据对象</param>
-        ///// <param name="sheetIndex">工作表sheet索引</param>
-        //public void fillDataToExcel( string sourceExcelPath, string targetExcelPath, Dictionary<string, string> map, int sheetIndex)
-        //{
-        //    string sheetName = loadExcelWorkbook(sourceExcelPath).GetSheetName(sheetIndex);
-        //    fillDataToExcel(sourceExcelPath, targetExcelPath, map, sheetName);
-        //}
+        //填写数据到excel,根据单元格坐标
+        //Dictionary的key为坐标(如"C3"),value为值
+        /// <summary>
+        /// 填写数据到excel,根据单元格坐标.Dictionary的key为坐标(如"C3"),value为值
+        /// </summary>
+        /// <param name="sourceExcelPath">源工作簿文件路径</param>
+        /// <param name="targetExcelPath">目标工作簿文件路径</param>
+        /// <param name="map">Dictionary数据对象</param>
+        /// <param name="sheetIndex">工作表sheet索引</param>
+        public void fillDataToExcel(string sourceExcelPath, string targetExcelPath, Dictionary<string, string> map, int sheetIndex)
+        {
+            string sheetName = loadExcelWorkbookI(sourceExcelPath).GetSheetName(sheetIndex);
+            fillDataToExcel(sourceExcelPath, targetExcelPath, map, sheetName);
+        }
 
-        ////填写数据到excel,根据单元格坐标
-        ////Dictionary的key为坐标(如"C3"),value为值
-        ///// <summary>
-        ///// 填写数据到excel,根据单元格坐标.Dictionary的key为坐标(如"C3"),value为值
-        ///// </summary>
-        ///// <param name="sourceExcelPath">源工作簿文件路径</param>
-        ///// <param name="targetExcelPath">目标工作簿文件路径</param>
-        ///// <param name="map">Dictionary数据对象</param>
-        ///// <param name="sheetName">工作表名</param>
-        //public void fillDataToExcel( string sourceExcelPath, string targetExcelPath,  Dictionary<string, string> map, string sheetName)
-        //{
-        //    try
-        //    {
-        //        HSSFWorkbook wb = loadExcelWorkbook(sourceExcelPath);
-        //        HSSFSheet sheet = (HSSFSheet)wb.GetSheet(sheetName);//获取模板sheet
+        //填写数据到excel,根据单元格坐标
+        //Dictionary的key为坐标(如"C3"),value为值
+        /// <summary>
+        /// 填写数据到excel,根据单元格坐标.Dictionary的key为坐标(如"C3"),value为值
+        /// </summary>
+        /// <param name="sourceExcelPath">源工作簿文件路径</param>
+        /// <param name="targetExcelPath">目标工作簿文件路径</param>
+        /// <param name="map">Dictionary数据对象</param>
+        /// <param name="sheetName">工作表名</param>
+        public void fillDataToExcel(string sourceExcelPath, string targetExcelPath, Dictionary<string, string> map, string sheetName)
+        {
+            try
+            {
+                IWorkbook wb = loadExcelWorkbookI(sourceExcelPath);
+                ISheet sheet = (HSSFSheet)wb.GetSheet(sheetName);//获取模板sheet
 
-        //        foreach (var oneMapPoint in map)
-        //        {
-        //            string key = oneMapPoint.Key.ToString();
-        //            string value = oneMapPoint.Value.ToString();
-        //            int row = disassemblyToNumber(key) - 1;
-        //            int col = System26ToNumber(disassemblyToString(key)) - 1;
-        //            sheet.GetRow(row).GetCell(col).SetCellValue(value);
-        //        }
-        //        saveExcelWithoutAsk(targetExcelPath, wb);
-        //        return;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        WriteLog(ex, "");
-        //        return;
-        //    }
-        //}
+                foreach (var oneMapPoint in map)
+                {
+                    string key = oneMapPoint.Key.ToString();
+                    string value = oneMapPoint.Value.ToString();
+                    int row = disassemblyToNumber(key) - 1;
+                    int col = System26ToNumber(disassemblyToString(key)) - 1;
+                    sheet.GetRow(row).GetCell(col).SetCellValue(value);
+                }
+                saveExcelWithoutAsk(targetExcelPath, wb);
+                return;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return;
+            }
+        }
+
+        //填写数据到excel,根据单元格坐标,返回反写字段的值和表字段名称
+        //Dictionary的key为坐标(如"C3"),value为值
+        /// <summary>
+        /// 填写数据到excel,根据单元格坐标.Dictionary的key为坐标(如"C3"),value为值
+        /// </summary>
+        /// <param name="sourceExcelPath">源工作簿文件路径</param>
+        /// <param name="map">Dictionary数据对象</param>
+        /// <param name="sheetName">工作表名</param>
+        public object[][] reportCoordinateExcel(string sourceExcelPath, int sheetIndex, string targetExcelPath, object[] fields, object[] aCoordField)
+        {
+            try
+            {
+                IWorkbook wb = loadExcelWorkbookI(sourceExcelPath);
+                ISheet sheet = (HSSFSheet)wb.GetSheetAt(sheetIndex);//获取模板sheet
+                Dictionary<string, string> map = dArray2Dictionary(fields);//要写入的数据
+                Dictionary<string, string> mpaCoordFields = dArray2Dictionary(aCoordField);//要反写的数据
+                foreach (var oneMapPoint in map)
+                {
+                    string key = oneMapPoint.Key.ToString();
+                    string value = oneMapPoint.Value.ToString();
+                    int row = disassemblyToNumber(key) - 1;
+                    int col = System26ToNumber(disassemblyToString(key)) - 1;
+                    sheet.GetRow(row).GetCell(col).SetCellValue(value);
+                }
+
+                //
+                //int iCFCount = mpaCoordFields.Count;
+                //string[,] field_value = null;
+                List<object[]> arrayList = new List<object[]>();
+                //Dictionary<string, string> aFiledValue = new Dictionary<string, string>();
+                int i = 0;
+                foreach (var oneMapPoint in mpaCoordFields)
+                {
+                    string key = oneMapPoint.Key.ToString();
+                    string value = oneMapPoint.Value.ToString();
+                    int row = disassemblyToNumber(key) - 1;
+                    int col = System26ToNumber(disassemblyToString(key)) - 1;
+                    string cellValue = sheet.GetRow(row).GetCell(col).StringCellValue;
+                    //aFiledValue.Add(value, cellValue);
+                    object[] objArray = new object[] { value, cellValue };
+                    arrayList.Add(objArray);
+                    //field_value[i, 0] = value;
+                    //field_value[i, 1] = cellValue;
+                    //i++;
+                }
+                sheet.ForceFormulaRecalculation = true;//计算Excel公式
+                saveExcelWithoutAsk(targetExcelPath, wb);
+                return arrayList.ToArray();
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return null;
+            }
+        }
         #endregion
 
         /// <summary>
@@ -3928,7 +3984,7 @@ namespace nsLims_NPOI
         /// <param name="sheetIndex"></param>
         /// <param name="targetPath">目标文件路径</param>
         /// <param name="dArray">二维数组,第一行为表头</param>
-        /// <param name="colListC"></param>
+        /// <param name="colListC">需要合并的列索引</param>
         /// <param name="updHeight">行高的修改量</param>
         /// <param name="specialChars">要替换的特殊字符</param>
         /// <param name="unpivotHead">转置列列头</param>
@@ -4079,6 +4135,103 @@ namespace nsLims_NPOI
                 //stretchLastRowHeight(targetPath, sheetIndex);
                 //classExcelMthd.stretchLastRowHeight(targetPath, sheetIndex+1);
                 return true;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 导出一维报表(不扩展列,只扩展行)从表,数据为object[]格式, 简单的导出,不调整格式
+        /// </summary>
+        /// <param name="modlePath">模板文件路径</param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="targetPath">目标文件路径</param>
+        /// <param name="dArray">二维数组,第一行为表头</param>
+        /// <returns></returns>
+        public Boolean reportOneDimSimpleExcel(string modlePath, int sheetIndex, string targetPath, object[] dArray)
+        {
+            try
+            {
+                IWorkbook wb = loadExcelWorkbookI(modlePath);//获取workbook
+                ISheet sheet = wb.GetSheetAt(sheetIndex);//获取sheet
+                string[] tableHead = dArray2String1((object[])dArray[0]);//最开始的行为表头
+                int[] colHeadSeq = getArraySequen(sheet, tableHead, "&[", "]"); //获取表头在模板中的顺序,表头数据无标记符号&[],需要添加
+                object[,] seqArray2 = getSequenArray2(colHeadSeq, dArray2Array2(dArray));//获取排序后的二维数组
+                Dictionary<int, string[]> dic = dArray2ToDictionary2(seqArray2);
+
+                ArrayList arr = new ArrayList(colHeadSeq);    //声明一个ArrayList并载入数组
+                int index = arr.IndexOf(0);          //通过indexof函数找到0所在数组中的位置,此处即是表的起始位置
+                string cellPosiValue = tableHead[index];
+
+                int row = selectPosition(sheet, "&[" + cellPosiValue + "]").X;//起始单元格行号
+                int col = selectPosition(sheet, "&[" + cellPosiValue + "]").Y; //起始单元格列号
+
+                string[] arrayTemp = dic[0];
+                for (int i = row + 1; i < row + dic.Count; i++)
+                {
+
+                    #region 扩充行,并设置格式为上一行
+                    //先扩充一行
+                    sheet.ShiftRows(i,                                 //--开始行
+                        sheet.LastRowNum,                            //--结束行
+                        1,                             //--移动大小(行数)--往下移动
+                        true,                                   //是否复制行高
+                        false                                  //是否重置行高
+                        );
+                    // 对批量移动后空出的空行插，创建相应的行，并以插入行的上一行为格式源(即：InsertRowIndex-1的那一行)
+
+                    IRow targetRow = null;
+                    ICell sourceCell = null;
+                    ICell targetCell = null;
+                    IRow mySourceStyleRow = sheet.GetRow(row);
+                    if (mySourceStyleRow == null)
+                        continue;
+
+                    targetRow = sheet.CreateRow(i);
+
+                    for (int m = mySourceStyleRow.FirstCellNum; m < mySourceStyleRow.LastCellNum; m++)
+                    {
+                        sourceCell = mySourceStyleRow.GetCell(m);
+                        if (sourceCell == null)
+                            continue;
+                        targetCell = targetRow.CreateCell(m);
+                        targetCell.CellStyle = sourceCell.CellStyle;
+                        targetCell.SetCellType(sourceCell.CellType);
+
+                    }
+
+                    #endregion
+
+                    arrayTemp = dic[i - row];
+                    for (int j = col; j < col + arrayTemp.Length; j++)
+                    {
+                        ICell cell = sheet.GetRow(i).GetCell(j);
+                        if (cell == null)
+                            continue;
+                        cell.SetCellValue(arrayTemp[j - col]);
+                    }
+                }
+                //全部向上移动1行
+                for (int i = row + 1; i <= sheet.LastRowNum; i++)
+                {
+                    sheet.ShiftRows(i, i, -1);
+                }
+                
+                sheet.RemoveRow(sheet.GetRow(sheet.LastRowNum + 1));//最后一个空行删除
+                sheet.ForceFormulaRecalculation = true;//计算Excel公式
+
+                //设置一个合并单元格区域，使用上下左右定义CellRangeAddress区域
+                //CellRangeAddress四个参数为：起始行，结束行，起始列，结束列
+                sheet.AddMergedRegion(new CellRangeAddress(sheet.LastRowNum, sheet.LastRowNum, 0, getColumnRange(sheet)[1]));
+
+                //刷新后才能计算翻页位置
+                saveExcelWithoutAsk(targetPath, wb);
+
+                //classExcelMthd.ReplaceAll(targetPath, sheetIndex + 1, specialChars); //替换特殊字符
+            return true;
             }
             catch (Exception ex)
             {

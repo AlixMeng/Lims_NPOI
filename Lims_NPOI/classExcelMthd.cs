@@ -5,11 +5,6 @@ using EXCEL = Microsoft.Office.Interop.Excel;
 using WORD = Microsoft.Office.Interop.Word;
 using Microsoft.Office.Interop.Word;
 using System.Reflection;
-using Microsoft.VisualBasic.Devices;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Drawing.Spreadsheet;
 using System.Collections.Generic;
 
 namespace nsLims_NPOI
@@ -555,6 +550,7 @@ namespace nsLims_NPOI
                     //((EXCEL.Range)sheet.Rows[20]).PageBreak = 1;
 
                 }
+                classLims_NPOI.WriteLog("dealMergedAreaInPages_new success", "");
             }
             catch (Exception ex)
             {
@@ -582,7 +578,7 @@ namespace nsLims_NPOI
                     if (cell == null) continue;
                     if ((bool)cell.MergeCells)
                     {
-                        
+
                         //先获取合并区域,不拆分,需要处理跨页再拆分
                         int[] mergedArea = getMergedArea(sheet, rowIndex, colseq[i], false);
 
@@ -597,7 +593,7 @@ namespace nsLims_NPOI
                         {
                             //获取合并区域的值,拆分合并后需要重新赋值
                             var cellValue = getMergerCellValue(sheet, rowIndex, colseq[i]);
-                            
+
                             //此处代表需要跨页拆分
                             var mgIndexT = sheet.get_Range(sheet.Cells[mergedArea[0], mergedArea[1]], sheet.Cells[mergedArea[2], mergedArea[3]]);
                             mgIndexT.UnMerge();
@@ -2010,6 +2006,7 @@ namespace nsLims_NPOI
                 rangeProgram.Application.DisplayAlerts = false;
                 rangeProgram.Merge(Missing.Value);
             }
+            classLims_NPOI.WriteLog("mergeTestCell success", "");
         }
 
         //处理报告附页的格式调整
@@ -2204,6 +2201,7 @@ namespace nsLims_NPOI
         {
             try
             {
+                //wb.Application.Run("AutoHeight");
                 object missing = System.Reflection.Missing.Value;
                 EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
                 int endRow = sheet.UsedRange.Rows.Count;
@@ -2219,7 +2217,7 @@ namespace nsLims_NPOI
                     if (autoRowheight > 0)
                     {
                         //根号倍数放大行高
-                        double sumRowHeight = autoRowheight + (updHeight*Math.Sqrt(autoRowheight)/100);
+                        double sumRowHeight = autoRowheight + (updHeight * Math.Sqrt(autoRowheight) / 100);
                         if (sumRowHeight > 409) sumRowHeight = 409;
                         //double sumRowHeight = autoRowheight + updHeight;
                         row.RowHeight = sumRowHeight;
@@ -2555,6 +2553,111 @@ namespace nsLims_NPOI
 
                 }
             }
+        }
+
+        //保护工作表
+        /// <summary>
+        /// 保护工作表
+        /// </summary>
+        /// <param name="wb">工作簿</param>
+        /// <param name="sheetIndex">工作表索引</param>
+        /// <param name="password">保护密码</param>
+        /// 
+        /// <param name="DrawingObjects">如果为 True，则保护形状。默认值是 True。对应excel中"编辑对象"</param>
+        /// <param name="Contents">如果为 True，则保护内容。对于图表，这样会保护整个图表。对于工作表，这样会保护锁定的单元格。默认值是 True。</param>
+        /// <param name="Scenarios">如果为 True，则保护方案。此参数仅对工作表有效。默认值是 True。</param>
+        /// 
+        /// <param name="UserInterfaceOnly">如果为 True，则保护用户界面，但不保护宏。如果省略此参数，则既保护宏也保护用户界面。</param>
+        /// <param name="AllowFormattingCells">如果为 True，则允许用户为受保护的工作表上的任意单元格设置格式。默认值是 False。</param>
+        /// <param name="AllowFormattingColumns">如果为 True，则允许用户为受保护的工作表上的任意列设置格式。默认值是 False。</param>
+        /// 
+        /// <param name="AllowFormattingRows">如果为 True，则允许用户为受保护的工作表上的任意行设置格式。默认值是 False。</param>
+        /// <param name="AllowInsertingColumns">如果为 True，则允许用户在受保护的工作表上插入列。默认值是 False。</param>
+        /// <param name="AllowInsertingRows">如果为 True，则允许用户在受保护的工作表上插入行。默认值是 False。</param>
+        /// 
+        /// <param name="AllowInsertingHyperlinks">如果为 True，则允许用户在受保护的工作表中插入超链接。默认值是 False。</param>
+        /// <param name="AllowDeletingColumns">如果为 True，则允许用户在受保护的工作表上删除列，要删除的列中的每个单元格都被解除锁定。默认值是 False。</param>
+        /// <param name="AllowDeletingRows">如果为 True，则允许用户在受保护的工作表上删除行，要删除的行中的每个单元格都被解除锁定。默认值是 False。</param>
+        /// 
+        /// <param name="AllowSorting">如果为 True，则允许用户在受保护的工作表上进行排序。排序区域中的每个单元格必须是解除锁定的或取消保护的。默认值是 False。</param>
+        /// <param name="AllowFiltering">如果为 True，则允许用户在受保护的工作表上设置筛选。用户可以更改筛选条件，但是不能启用或禁用自动筛选功能。用户也可以在已有的自动筛选功能上设置筛选。默认值是 False。</param>
+        /// <param name="AllowUsingPivotTables">如果为 True，则允许用户在受保护的工作表上使用数据透视表。默认值是 False。</param>
+        public void protectWorkSheet(EXCEL.Workbook wb, int sheetIndex, string password,
+            object DrawingObjects, object Contents, object Scenarios,
+            object UserInterfaceOnly, object AllowFormattingCells, object AllowFormattingColumns,
+            object AllowFormattingRows, object AllowInsertingColumns, object AllowInsertingRows,
+            object AllowInsertingHyperlinks, object AllowDeletingColumns, object AllowDeletingRows,
+            object AllowSorting, object AllowFiltering, object AllowUsingPivotTables)
+        {
+            object missing = Missing.Value;
+            EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+            sheet.Protect(password,
+                DrawingObjects, Contents, Scenarios,
+                UserInterfaceOnly, AllowFormattingCells, AllowFormattingColumns,
+                AllowFormattingRows, AllowInsertingColumns, AllowInsertingRows,
+                AllowInsertingHyperlinks, AllowDeletingColumns, AllowDeletingRows,
+                AllowSorting, AllowFiltering, AllowUsingPivotTables);
+        }
+
+        //保护文件下指定工作表
+        public void protectWorkSheet(string path, int sheetIndex, string password,
+            object DrawingObjects, object Contents, object Scenarios,
+            object UserInterfaceOnly, object AllowFormattingCells, object AllowFormattingColumns,
+            object AllowFormattingRows, object AllowInsertingColumns, object AllowInsertingRows,
+            object AllowInsertingHyperlinks, object AllowDeletingColumns, object AllowDeletingRows,
+            object AllowSorting, object AllowFiltering, object AllowUsingPivotTables)
+        {
+            object missing = Missing.Value;
+            EXCEL.ApplicationClass excel = null;
+            EXCEL.Workbook wb = null;
+            EXCEL.Workbooks workBooks = null;
+            try
+            {
+                excel = new EXCEL.ApplicationClass();
+                excel.DisplayAlerts = false;
+                workBooks = excel.Workbooks;
+                wb = workBooks.Open(path, missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing);
+
+                protectWorkSheet(wb, sheetIndex, password,
+                 DrawingObjects, Contents, Scenarios,
+                 UserInterfaceOnly, AllowFormattingCells, AllowFormattingColumns,
+                 AllowFormattingRows, AllowInsertingColumns, AllowInsertingRows,
+                 AllowInsertingHyperlinks, AllowDeletingColumns, AllowDeletingRows,
+                 AllowSorting, AllowFiltering, AllowUsingPivotTables);
+
+                wb.Save();
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+            finally
+            {
+                if (wb != null)
+                {
+                    //wb.Close(false, missing, false);
+                    wb.Close(false, missing, missing);
+                    int i = Marshal.ReleaseComObject(wb);
+                    wb = null;
+                }
+                if (workBooks != null)
+                {
+                    workBooks.Close();
+                    int i = Marshal.ReleaseComObject(workBooks);
+                    workBooks = null;
+                }
+                if (excel != null)
+                {
+                    excel.Quit();
+                    int i = Marshal.ReleaseComObject(excel);
+                    excel = null;
+                }
+
+            }
+            
         }
 
         //使用OFFICE组件设置行高加固定值,修改单位为磅

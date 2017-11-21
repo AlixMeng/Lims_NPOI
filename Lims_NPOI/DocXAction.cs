@@ -20,6 +20,24 @@ namespace nsLims_NPOI
         #region 操作word,用DocX
 
         /// <summary>
+        /// 加载DocX
+        /// </summary>
+        /// <returns></returns>
+        public DocX Load(string fileName)
+        {
+            return DocX.Load(fileName);
+        }
+
+        /// <summary>
+        /// 保存DocX
+        /// </summary>
+        /// <param name="doc"></param>
+        public void Save(DocX doc)
+        {
+            doc.Save();
+        }
+
+        /// <summary>
         /// 获取word页码数
         /// </summary>
         /// <param name="strSourceFile">要转换的Word文档</param>

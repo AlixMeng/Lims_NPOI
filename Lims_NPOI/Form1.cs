@@ -5,6 +5,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using NPOI.SS.UserModel;
+using NPOI.SS.Util;
 using NPOI.XSSF.UserModel;
 using wsdlLib;
 using EXCEL = Microsoft.Office.Interop.Excel;
@@ -50,7 +51,8 @@ namespace nsLims_NPOI
             //MergePDF mpf = new MergePDF();
             //FileConvertClass fcc = new FileConvertClass();
 
-            int[] inttt = new int[] { 1, 2, 3, 4, 8 };
+            //classExcelMthd.setAutoRowHeight("D:\\TEST.xls", 1, 5, 1, 8, 0);
+
             object missing = System.Reflection.Missing.Value;
             EXCEL.ApplicationClass excel = null;
             EXCEL.Workbook wb = null;
@@ -60,16 +62,11 @@ namespace nsLims_NPOI
                 excel = new EXCEL.ApplicationClass();
                 excel.DisplayAlerts = false;
                 workBooks = excel.Workbooks;
-                wb = workBooks.Open("D:\\印章坐标计算.xlsx", missing, missing,
+                wb = workBooks.Open("D:\\TEST.xls", missing, missing,
                     missing, missing, missing, missing, missing,
                     missing, missing, missing, missing, missing,
                     missing, missing);
-                //实例化Sheet后,释放Excel进程就会失败
-                //对于sheet的操作必须放在新的方法中,接口层级为Workbook
-                //excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
-                classExcelMthd.setAutoRowHeight(wb, 1, 1, 1, 8, 400);
-                //再还原为普通视图
-                //excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
+                excel.Run("AutoHeight");
                 wb.Save();
             }
             catch (Exception ex)
@@ -106,6 +103,67 @@ namespace nsLims_NPOI
 
             #region 作废的测试代码
 
+            //cln.reportCoordinateExcel("D:\\省市监督_一栏首页.xls", 0, "D:\\省市监督_一栏首页.xls",
+            //    new object[] { new object[] { "H26", "2017-09-26" } },
+            //    new object[] { new object[] { "G8", "PREORDERS.TRADEMARK" },
+            //                    new object[] { "G9", "PREORDERS.SPECMODEL" }});
+
+            //int[] inttt = new int[] { 1, 2, 3, 4, 8 };
+            //object missing = System.Reflection.Missing.Value;
+            //EXCEL.ApplicationClass excel = null;
+            //EXCEL.Workbook wb = null;
+            //EXCEL.Workbooks workBooks = null;
+            //try
+            //{
+            //    excel = new EXCEL.ApplicationClass();
+            //    excel.DisplayAlerts = false;
+            //    workBooks = excel.Workbooks;
+            //    wb = workBooks.Open("D:\\省市监督_一栏首页.xls", missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing);
+            //    //实例化Sheet后,释放Excel进程就会失败
+            //    //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+            //    //excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
+            //    cem.protectWorkSheet(wb, 1, "111",
+            //        true, true, true,
+            //        false, false, false,
+            //        true,/*允许设置行格式,拉伸行*/  false, false,
+            //        false, false, false,
+            //        false, false, false);
+            //    //再还原为普通视图
+            //    //excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
+            //    wb.Save();
+            //}
+            //catch (Exception ex)
+            //{
+            //    classLims_NPOI.WriteLog(ex, "");
+            //}
+            //finally
+            //{
+            //    if (wb != null)
+            //    {
+            //        //wb.Close(false, missing, false);
+            //        wb.Close(false, missing, missing);
+            //        int i = Marshal.ReleaseComObject(wb);
+            //        wb = null;
+            //    }
+            //    if (workBooks != null)
+            //    {
+            //        workBooks.Close();
+            //        int i = Marshal.ReleaseComObject(workBooks);
+            //        workBooks = null;
+            //    }
+            //    if (excel != null)
+            //    {
+            //        excel.Quit();
+            //        int i = Marshal.ReleaseComObject(excel);
+            //        excel = null;
+            //    }
+            //    GC.Collect();
+            //    GC.WaitForPendingFinalizers();
+
+            //}
 
             //object[] o0 = { "序号", "检测项目", "分析项", "样品", "技术要求",
             //    "单位", "单项结论", "实测值1", "实测值2", "实测值3" };

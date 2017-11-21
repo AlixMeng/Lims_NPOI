@@ -6,6 +6,7 @@ using WORD = Microsoft.Office.Interop.Word;
 using Microsoft.Office.Interop.Word;
 using System.Reflection;
 using novapiLib80;
+//using PDFMAKERAPILib;
 
 namespace nsLims_NPOI
 {
@@ -57,7 +58,7 @@ namespace nsLims_NPOI
                     //把sheet设置成横向
                     //sheet.PageSetup.Orientation = EXCEL.XlPageOrientation.xlLandscape;
                     //可以设置sheet页的其他相关设置，不列举
-                    sheet.ExportAsFixedFormat(targetType, targetFile, EXCEL.XlFixedFormatQuality.xlQualityStandard, true, false, missing, missing, missing, missing);
+                    sheet.ExportAsFixedFormat(targetType, targetFile, EXCEL.XlFixedFormatQuality.xlQualityMinimum, true, false, missing, missing, missing, missing);
                     flag = true;
                 }
                 catch (Exception ex)
@@ -147,7 +148,7 @@ namespace nsLims_NPOI
                     workBook.ExportAsFixedFormat(
                         EXCEL.XlFixedFormatType.xlTypePDF,
                         toPath,
-                        EXCEL.XlFixedFormatQuality.xlQualityStandard,//可设置为 xlQualityStandard 或 xlQualityMinimum。
+                        EXCEL.XlFixedFormatQuality.xlQualityMinimum,//可设置为 xlQualityStandard 或 xlQualityMinimum。
                         true,//包含文档属性
                         false, //如果设置为 True，则忽略在发布时设置的任何打印区域。如果设置为 False，则使用在发布时设置的打印区域。
                         Type.Missing,//发布的起始页码。如果省略此参数，则从起始位置开始发布。
@@ -401,16 +402,17 @@ namespace nsLims_NPOI
                 doc.ExportAsFixedFormat(
                     toPath,
                     WdExportFormat.wdExportFormatPDF,
-                    false,
+                    false,//设为转换后不打开
                     WdExportOptimizeFor.wdExportOptimizeForPrint,//指定进行屏幕优化还是打印优化。
-                    WdExportRange.wdExportAllDocument, 1, 1,
-                    WORD.WdExportItem.wdExportDocumentContent,//指定导出过程是仅包括文本，还是同时包括文本和标记。
+                    WdExportRange.wdExportAllDocument, 0, 0,//转换页设为 全部
+                    WORD.WdExportItem.wdExportDocumentContent,//指定导出过程是仅包括文本，还是同时包括文本和标记。此处代表仅包括文本
                     true,// 如果要在新文件中包含文档属性，则为 true；否则为 false。
-                    false,// 如果要在源文档具有信息权限管理 (IRM) 保护时将 IRM 权限复制到 XPS 文档，则为 true；否则为 false。 默认值为 true。 
-                    WdExportCreateBookmarks.wdExportCreateNoBookmarks,
-                    false,// 如果要包含额外数据（如有关内容的流和逻辑组织的信息）来协助使用屏幕读取器，则为 true；否则为 false。 默认值为 true。 
+                    true,// 如果要在源文档具有信息权限管理 (IRM) 保护时将 IRM 权限复制到 XPS 文档，则为 true；否则为 false。 默认值为 true。 
+                    WdExportCreateBookmarks.wdExportCreateWordBookmarks,
+                    true,// 如果要包含额外数据（如有关内容的流和逻辑组织的信息）来协助使用屏幕读取器，则为 true；否则为 false。 默认值为 true。 
                     true,// 如果要包含文本的位图，则为 true；如果要引用文本字体，则为 false。 如果字体许可证不允许在 PDF 文件中嵌入某种字体，则将此参数设置为 true。 如果将此参数设置为 false，则当指定字体不可用时，查看者的计算机会替换合适的字体。 默认值为 true。 
-                    false, oMissing);
+                    false,//    如果要将 PDF 使用范围限制为按照 ISO 19005-1 进行标准化的 PDF 子集，则为 true；否则为 false。如果将此参数设置为 true，则生成的文件会是更加可靠的独立文件，但这些文件可能会更大，或者由于格式限制而显示更多的视觉瑕疵。默认值为 false。
+                    oMissing);
 
                 flag = true;
             }
@@ -434,10 +436,33 @@ namespace nsLims_NPOI
                     ((WORD._Application)applicationClass).Quit(Missing.Value, Missing.Value, Missing.Value);
                     applicationClass = null;
                 }
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
             }
             return flag;
         }
 
+        ////使用 Adobe Acrobat DC的OFFICE COM插件,转为PDF
+        //public bool PdfMakerToPdf(string fromWordPath, string toPath)
+        //{
+        //    bool flag = true;
+        //    try
+        //    {
+        //        ///
+        //        ///参数：docfile，源office文件绝对路径及文件名（C:\office\myDoc.doc）；printpath，pdf文件保存路径（D:\myPdf）；printFileName，保
+        //        ///存pdf文件的文件名（myNewPdf.pdf）
+        //        ///
+        //        object missing = System.Type.Missing;
+        //        PDFMakerApp app = new PDFMakerApp();
+        //        var rtnObj = app.CreatePDF(fromWordPath, toPath, PDFMakerSettings.kConvertAllPages, false, false, true, missing);
+        //    }
+        //    catch (Exception exception)
+        //    {
+        //        classLims_NPOI.WriteLog(exception, "");
+        //        flag = false;
+        //    }
+        //    return flag;
+        //}
 
         #endregion
 
