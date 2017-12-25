@@ -79,6 +79,7 @@ namespace nsLims_NPOI
         /// </summary>
         /// <param name="doc"></param>
         /// <param name="replaceFlag"></param>
+        /// <param name="alignment">对齐方式</param>
         /// <returns></returns>
         public Paragraph GetParagraphByReplaceFlag(DocX doc, string replaceFlag, string alignment)
         {
@@ -564,6 +565,7 @@ namespace nsLims_NPOI
         /// <param name="doc"></param>
         /// <param name="replaceFlag"></param>
         /// <param name="imgPath"></param>
+        /// <param name="alignment">对齐方式</param>
         /// <param name="height"></param>
         /// <param name="width"></param>
         public void InsertPicture(DocX doc, string replaceFlag, string imgPath, string alignment, double height, double width)
@@ -599,6 +601,7 @@ namespace nsLims_NPOI
         /// <param name="doc"></param>
         /// <param name="replaceFlag"></param>
         /// <param name="imgPath"></param>
+        /// <param name="alignment">对齐方式</param>
         public Picture InsertPicture(DocX doc, string replaceFlag, string imgPath, string alignment)
         {
             Paragraph p = GetParagraphByReplaceFlag(doc, replaceFlag, alignment);
@@ -636,9 +639,9 @@ namespace nsLims_NPOI
         /// 插入图片及图片注释（对图片尺寸没有要求）
         /// </summary>
         /// <param name="oldPath">添加的doc路径</param>
-        /// <param name="imagePath">添加图片的数组</param>
+        /// <param name="oPath">添加图片的数组</param>
         /// <param name="replaceFlag">替换符</param>
-        /// <param name="remark">图片备注数组</param>
+        /// <param name="oRemark">图片备注数组</param>
         public void AddWordPic(string oldPath, object[] oPath, string replaceFlag, object[] oRemark)
         {
             DocX oldDocument = DocX.Load(oldPath);

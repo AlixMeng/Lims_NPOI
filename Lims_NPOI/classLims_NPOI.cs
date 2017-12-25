@@ -15,8 +15,14 @@ using NPOI.XSSF.UserModel;
 
 namespace nsLims_NPOI
 {
+    /// <summary>
+    /// 使用 NPOI 类库处理excel文件,包含了和LIMS数据交互时的数据格式转换方法
+    /// </summary>
     public partial class classLims_NPOI : Form
     {
+        /// <summary>
+        /// classLims_NPOI构造函数
+        /// </summary>
         public classLims_NPOI()
         {
             InitializeComponent();
@@ -33,10 +39,17 @@ namespace nsLims_NPOI
         private static double PAGE_WIDTH = 84.5;
 
         //最后一页的起始行号
+        /// <summary>
+        /// 最后一页的起始行号
+        /// </summary>
         public int lastPageFirstRow = -1;
 
         //workbook
         private IWorkbook iWorkbook;
+
+        /// <summary>
+        /// IWorkbook 公用对象
+        /// </summary>
         public IWorkbook IWorkbook
         {
             get
@@ -188,7 +201,7 @@ namespace nsLims_NPOI
         /// <summary>
         /// 设置列宽
         /// </summary>
-        /// <param name="hssfworkbook">源工作簿</param>
+        /// <param name="workbook">源工作簿</param>
         /// <param name="sheetName">工作表名</param>
         /// <param name="col">列号</param>
         /// <param name="width">宽度</param>
@@ -361,7 +374,7 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// 按照标记找到range单元格名,如"&[test1]"所在单元格为H2,则返回"H2"
+        /// 按照标记找到range单元格名,如"[test1]"所在单元格为H2,则返回"H2"
         /// </summary>
         /// <param name="filePath">Excel文件路径</param>
         /// <param name="sheetIndex">sheet索引</param>
@@ -476,6 +489,11 @@ namespace nsLims_NPOI
         }
 
         //设置页码格式
+        /// <summary>
+        /// 设置页码格式
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="excPage"></param>
         public void setExcelPageFormat(string filePath, int excPage)
         {
             if (excPage < 0)
@@ -500,6 +518,14 @@ namespace nsLims_NPOI
         }
 
         //设置多个sheet的起始页码
+        /// <summary>
+        /// 设置多个sheet的起始页码
+        /// </summary>
+        /// <param name="wb"></param>
+        /// <param name="startSheetIndex"></param>
+        /// <param name="startPage"></param>
+        /// <param name="totalPages"></param>
+        /// <returns></returns>
         public IWorkbook setStartPage(IWorkbook wb, int startSheetIndex, string startPage, int totalPages)
         {
             for (int i = startSheetIndex; i < wb.NumberOfSheets; i++)
@@ -517,6 +543,12 @@ namespace nsLims_NPOI
         }
 
         //判断行是否为新页的第一行,注意第一页的第一行判定为false
+        /// <summary>
+        /// 判断行是否为新页的第一行,注意第一页的第一行判定为false
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <param name="rowIndex"></param>
+        /// <returns></returns>
         private bool IsNewPageRow(ISheet sheet, int rowIndex)
         {
 
@@ -926,6 +958,11 @@ namespace nsLims_NPOI
         #endregion
 
 
+            /// <summary>
+            /// 处理excel跨页后的合并单元格
+            /// </summary>
+            /// <param name="filePath"></param>
+            /// <param name="sheetIndex"></param>
         public void dealMergedAreaInPages(string filePath, int sheetIndex)
         {
             IWorkbook wb = loadExcelWorkbookI(filePath);
@@ -1026,10 +1063,10 @@ namespace nsLims_NPOI
                 int testNoIndex = selectPosition(sheet, "检测项目").Y;
                 //取上一行检测项目值
                 string testNo = getCellStringValueAllCase(sheet.GetRow(i - 1).GetCell(testNoIndex));
-                for (int n = i; n < sheet.LastRowNum; n++)
+                if (i < sheet.LastRowNum)
                 {
                     //如果检测项目相等,则加一
-                    IRow nRow = sheet.GetRow(n);
+                    IRow nRow = sheet.GetRow(i);
                     if (nRow == null) return;
                     ICell cell = nRow.GetCell(testNoIndex);
                     if (cell == null) return;
@@ -1936,6 +1973,13 @@ namespace nsLims_NPOI
         }
 
         //锁定整个excel,开放指定单元格
+        /// <summary>
+        /// 锁定整个excel,开放指定单元格
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="flags"></param>
+        /// <param name="psw"></param>
         public void protectExcel(string filePath, int sheetIndex, string[] flags, string psw)
         {
             try
@@ -2183,7 +2227,7 @@ namespace nsLims_NPOI
         /// <summary>
         /// 在指定位置插入行
         /// </summary>
-        /// <param name="wb">源workbook工作簿</param>
+        /// <param name="workbook">源workbook工作簿</param>
         /// <param name="sheetName">工作表名</param>
         /// <param name="InsertRowIndex">插入行位置,行号</param>
         /// <param name="mySourceStyleRow">要插入的行</param>
@@ -2324,6 +2368,48 @@ namespace nsLims_NPOI
             return p;
         }
 
+        /// <summary>
+        /// 获取sheet所有列宽,返回一个浮点数组
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="sheetIndex"></param>
+        /// <returns>浮点数组,对应每列列宽</returns>
+        public int[] getColumnsWidth(string filePath, int sheetIndex)
+        {
+            ISheet sheet = loadExcelSheetI(filePath, sheetIndex);
+            return getColumnsWidth(sheet);
+        }
+
+        //获取sheet所有列宽,返回一个浮点数组
+        /// <summary>
+        /// 获取sheet所有列宽,返回一个浮点数组
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <returns>浮点数组,对应每列列宽</returns>
+        public int[] getColumnsWidth(ISheet sheet)
+        {
+            try
+            {
+                int endCol = getColumnRange(sheet)[1];//获取最大列号
+                List<int> listFloat = new List<int>();
+                for (int i = 0; i <= endCol; i++)
+                {
+                    if (sheet.IsColumnHidden(i) == true)
+                    {
+                        listFloat.Add(0);
+                        continue;
+                    }
+                    int iNpoiWidth = sheet.GetColumnWidth(i);
+                    listFloat.Add(iNpoiWidth);
+                }
+                return listFloat.ToArray();
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return null;
+            }
+        }
 
         #region 废弃使用"C12"作为单元格坐标
         //填写数据到excel,根据单元格坐标
@@ -2381,9 +2467,12 @@ namespace nsLims_NPOI
         /// 填写数据到excel,根据单元格坐标.Dictionary的key为坐标(如"C3"),value为值
         /// </summary>
         /// <param name="sourceExcelPath">源工作簿文件路径</param>
-        /// <param name="map">Dictionary数据对象</param>
-        /// <param name="sheetName">工作表名</param>
-        public object[][] reportCoordinateExcel(string sourceExcelPath, int sheetIndex, string targetExcelPath, object[] fields, object[] aCoordField)
+        /// <param name="sheetIndex">sheet索引</param>
+        /// <param name="targetExcelPath">目标路径</param>
+        /// <param name="fields">需要填写的数据</param>
+        /// <param name="aCoordField">需要读取的单元格的值</param>
+        public object[][] reportCoordinateExcel(string sourceExcelPath, int sheetIndex, string targetExcelPath,
+            object[] fields, object[] aCoordField)
         {
             try
             {
@@ -2405,7 +2494,7 @@ namespace nsLims_NPOI
                 //string[,] field_value = null;
                 List<object[]> arrayList = new List<object[]>();
                 //Dictionary<string, string> aFiledValue = new Dictionary<string, string>();
-                int i = 0;
+                //int i = 0;
                 foreach (var oneMapPoint in mpaCoordFields)
                 {
                     string key = oneMapPoint.Key.ToString();
@@ -2905,7 +2994,7 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// json to Dictionary<string, object>
+        /// json to Dictionary(string, object)
         /// </summary>
         /// <param name="jsonData"></param>
         /// <returns></returns>
@@ -2929,7 +3018,7 @@ namespace nsLims_NPOI
 
 
         /// <summary>
-        /// 二维数组转Dictionary<string, string>
+        /// 二维数组转Dictionary(string, string)
         /// </summary>
         /// <param name="dArray"></param>
         /// <returns></returns>
@@ -2955,7 +3044,7 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// Array转Dictionary<string, string>
+        /// Array转Dictionary(string, string)
         /// </summary>
         /// <param name="dArray"></param>
         /// <returns></returns>
@@ -2983,7 +3072,7 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// object[]转Dictionary<string, string>
+        /// object[]转Dictionary(string, string)
         /// </summary>
         /// <param name="dArray"></param>
         /// <returns></returns>
@@ -3016,7 +3105,7 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// object[,]转Dictionary<string, string>
+        /// object[,]转Dictionary(string, string)
         /// </summary>
         /// <param name="dArray"></param>
         /// <returns></returns>
@@ -3044,7 +3133,7 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// object[]转Dictionary<int, string[]>
+        /// object[]转Dictionary(int, string[])
         /// </summary>
         /// <param name="dArray"></param>
         /// <returns></returns>
@@ -3073,7 +3162,36 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// object[,]转Dictionary<int, string[]>
+        /// object[]转 float[,]
+        /// </summary>
+        /// <param name="dArray"></param>
+        /// <returns></returns>
+        public static List<List<float>> dArray2Float2(object[] dArray)
+        {
+            List<List<float>> llf = new List<List<float>>();
+            try
+            {
+                for (int i = 0; i < dArray.Length; i++)
+                {
+                    List<float> lf = new List<float>();
+                    object[] obj = (object[])dArray[i];
+                    for (int j = 0; j < obj.Length; j++)
+                    {
+                        lf.Add(Convert.ToSingle(obj[j]));
+                    }
+                    llf.Add(lf);
+                }
+                return llf;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// object[,]转Dictionary(int, string[])
         /// </summary>
         /// <param name="dArray">二维数组</param>
         /// <returns></returns>
@@ -3129,6 +3247,56 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
+        /// object[]转 int[]
+        /// </summary>
+        /// <param name="dArray">object[]一维数组</param>
+        /// <returns>int[]一维数组</returns>
+        public static int[] dArray2Int(object[] dArray)
+        {
+            try
+            {
+                int[] inter = new int[dArray.Length];
+                int length = dArray.Length;
+                for (int i = 0; i < length; i++)
+                {
+                    inter[i] = (int)dArray[i];
+                    
+                }
+                return inter;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// object[]转 float[]
+        /// </summary>
+        /// <param name="dArray">object[]一维数组</param>
+        /// <returns>float[]一维数组</returns>
+        public static float[] dArray2float(object[] dArray)
+        {
+            try
+            {
+                float[] inter = new float[dArray.Length];
+                int length = dArray.Length;
+                for (int i = 0; i < length; i++)
+                {
+                    inter[i] = Convert.ToSingle( dArray[i]);
+
+                }
+                return inter;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// object[]转string[]
         /// </summary>
         /// <param name="dArray"></param>
@@ -3141,7 +3309,11 @@ namespace nsLims_NPOI
             {
                 for (int i = 0; i < dArray.Length; i++)
                 {
-                    list.Add(dArray[i].ToString());
+                    var sTemp = dArray[i];
+                    if (sTemp == null)
+                        list.Add(null);
+                    else
+                        list.Add(sTemp.ToString());
                 }
                 sl = list.ToArray();
                 return sl;
@@ -3393,11 +3565,25 @@ namespace nsLims_NPOI
             return;
         }
 
+        /// <summary>
+        /// 锁定单元格
+        /// </summary>
+        /// <param name="wb"></param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="rowNum"></param>
+        /// <param name="colNum"></param>
+        /// <param name="isLock"></param>
         public static void LockCell(IWorkbook wb, int sheetIndex, int rowNum, int colNum, bool isLock)
         {
             wb.GetSheetAt(sheetIndex).GetRow(rowNum).GetCell(colNum).CellStyle.IsLocked = isLock;
         }
 
+        /// <summary>
+        /// 锁定sheet页
+        /// </summary>
+        /// <param name="wb"></param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="password"></param>
         public static void LockSheet(IWorkbook wb, int sheetIndex, string password)
         {
             wb.GetSheetAt(sheetIndex).ProtectSheet(password);
@@ -3405,12 +3591,32 @@ namespace nsLims_NPOI
 
 
         #region 检测文件被占用
+        /// <summary>
+        /// 测试打开文件
+        /// </summary>
+        /// <param name="lpPathName">文件路径</param>
+        /// <param name="iReadWrite">打开类型</param>
+        /// <returns></returns>
         [DllImport("kernel32.dll")]
         public static extern IntPtr _lopen(string lpPathName, int iReadWrite);
+        /// <summary>
+        /// 关闭文件
+        /// </summary>
+        /// <param name="hObject">要关闭对象</param>
+        /// <returns></returns>
         [DllImport("kernel32.dll")]
         public static extern bool CloseHandle(IntPtr hObject);
+        /// <summary>
+        /// 常量,读写
+        /// </summary>
         public const int OF_READWRITE = 2;
+        /// <summary>
+        /// 常量
+        /// </summary>
         public const int OF_SHARE_DENY_NONE = 0x40;
+        /// <summary>
+        /// 检测文件被占用,已经被占用的错误类型
+        /// </summary>
         public readonly IntPtr HFILE_ERROR = new IntPtr(-1);
 
         /// <summary>
@@ -4243,7 +4449,7 @@ namespace nsLims_NPOI
         /// <summary>
         /// 合并指定列,按值相等合并
         /// </summary>
-        /// <param name="sheetName">目标sheet</param>
+        /// <param name="sheet">目标sheet</param>
         /// <param name="colList">要合并的单元格所在列</param>
         /// <param name="startRow">开始行</param>
         /// <param name="endRow">结束行</param>
@@ -4321,7 +4527,8 @@ namespace nsLims_NPOI
         /// <summary>
         /// 合并指定列,按值相等合并
         /// </summary>
-        /// <param name="sheetName">目标sheet</param>
+        /// <param name="sourcePath"></param>
+        /// <param name="sheetIndex"></param>
         /// <param name="colList">要合并的单元格所在列</param>
         /// <param name="startRow">开始行</param>
         /// <param name="endRow">结束行</param>
@@ -4446,8 +4653,7 @@ namespace nsLims_NPOI
         /// 通过标记字符串获取单元格所在合并区域
         /// </summary>
         /// <param name="sheet"></param>
-        /// <param name="row">行号</param>
-        /// <param name="col">列号</param>
+        /// <param name="flag">标记字符串</param>
         /// <returns>2x2数组</returns>
         public int[,] getCellMergeArea(ISheet sheet, string flag)
         {
@@ -4481,10 +4687,6 @@ namespace nsLims_NPOI
         /// 合并指定行,按值相等合并
         /// </summary>
         /// <param name="sheet">目标sheet</param>
-        /// <param name="startRow">开始行</param>
-        /// <param name="endRow">结束行</param>
-        /// <param name="startCol">来时列</param>
-        /// <param name="endCol">结束列</param>
         public ISheet mergeRowCells(ISheet sheet)
         {
             try
@@ -4763,8 +4965,10 @@ namespace nsLims_NPOI
         //    return tempValue;
         //}
 
-
-
+        /// <summary>
+        /// 前台打印输出弹窗
+        /// </summary>
+        /// <param name="msg"></param>
         public void alert(object msg)
         {
             MessageBox.Show(msg.ToString());

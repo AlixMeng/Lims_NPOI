@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using NPOI.SS.UserModel;
@@ -9,16 +10,27 @@ using NPOI.SS.Util;
 using NPOI.XSSF.UserModel;
 using wsdlLib;
 using EXCEL = Microsoft.Office.Interop.Excel;
+using WORD = Microsoft.Office.Interop.Word;
 
 namespace nsLims_NPOI
 {
+    /// <summary>
+    /// 测试用窗体
+    /// </summary>
     public partial class Form1 : Form
     {
+        /// <summary>
+        /// Form1构造函数
+        /// </summary>
         public Form1()
         {
             InitializeComponent();
         }
 
+        /// <summary>
+        /// 前台打印输出弹窗
+        /// </summary>
+        /// <param name="str"></param>
         public static void alert(object str)
         {
             string s = str.ToString();
@@ -37,13 +49,14 @@ namespace nsLims_NPOI
                 MessageBox.Show(s);
             }
         }
-       
+
 
         private void button1_Click(object sender, EventArgs e)
         {
             button1.Enabled = false;
+            string s;
 
-            //classLims_NPOI cln = new classLims_NPOI();
+            classLims_NPOI cln = new classLims_NPOI();
             //ConvertbyPrinter cbp = new ConvertbyPrinter();
             classExcelMthd cem = new classExcelMthd();
             //ImgConvert ic = new ImgConvert();
@@ -51,57 +64,190 @@ namespace nsLims_NPOI
             //MergePDF mpf = new MergePDF();
             //FileConvertClass fcc = new FileConvertClass();
 
-            //classExcelMthd.setAutoRowHeight("D:\\TEST.xls", 1, 5, 1, 8, 0);
-
-            object missing = System.Reflection.Missing.Value;
-            EXCEL.ApplicationClass excel = null;
-            EXCEL.Workbook wb = null;
-            EXCEL.Workbooks workBooks = null;
-            try
-            {
-                excel = new EXCEL.ApplicationClass();
-                excel.DisplayAlerts = false;
-                workBooks = excel.Workbooks;
-                wb = workBooks.Open("D:\\TEST.xls", missing, missing,
-                    missing, missing, missing, missing, missing,
-                    missing, missing, missing, missing, missing,
-                    missing, missing);
-                excel.Run("AutoHeight");
-                wb.Save();
-            }
-            catch (Exception ex)
-            {
-                classLims_NPOI.WriteLog(ex, "");
-            }
-            finally
-            {
-                if (wb != null)
+            object[] aSYData =
                 {
-                    //wb.Close(false, missing, false);
-                    wb.Close(false, missing, missing);
-                    int i = Marshal.ReleaseComObject(wb);
-                    wb = null;
-                }
-                if (workBooks != null)
-                {
-                    workBooks.Close();
-                    int i = Marshal.ReleaseComObject(workBooks);
-                    workBooks = null;
-                }
-                if (excel != null)
-                {
-                    excel.Quit();
-                    int i = Marshal.ReleaseComObject(excel);
-                    excel = null;
-                }
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
+                new object[] { "&[方法编码]", "EXCEL.Workbooks workBooks\nnew EXCEL.ApplicationClass" }//
+            };
+            //cem.reportStaticExcel("D:\\Excel原始记录.xlsx", 1, aSYData, false, "");
+            cln.reportStaticExcel("D:\\Excel原始记录.xls", 0, "D:\\Excel原始记录111.xls", aSYData);
+            //object missing = System.Reflection.Missing.Value;
+            //EXCEL.ApplicationClass excel = null;
+            //EXCEL.Workbook wb = null;
+            //EXCEL.Workbooks workBooks = null;
+            //try
+            //{
+            //    excel = new EXCEL.ApplicationClass();
+            //    excel.DisplayAlerts = false;
+            //    workBooks = excel.Workbooks;
+            //    wb = workBooks.Open("D:\\test.xls", missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing);
 
-            }
+            //    cem.unprotectWorkSheet(wb, 1, "wlzx@01");
 
-            string s = "";
+            //    wb.Save();
+            //}
+            //catch (Exception ex)
+            //{
+            //    classLims_NPOI.WriteLog(ex, "");
+            //}
+            //finally
+            //{
+            //    if (wb != null)
+            //    {
+            //        //wb.Close(false, missing, false);
+            //        wb.Close(false, missing, missing);
+            //        int i = Marshal.ReleaseComObject(wb);
+            //        wb = null;
+            //    }
+            //    if (workBooks != null)
+            //    {
+            //        workBooks.Close();
+            //        int i = Marshal.ReleaseComObject(workBooks);
+            //        workBooks = null;
+            //    }
+            //    if (excel != null)
+            //    {
+            //        excel.Quit();
+            //        int i = Marshal.ReleaseComObject(excel);
+            //        excel = null;
+            //    }
+            //    GC.Collect();
+            //    GC.WaitForPendingFinalizers();
+
+            //}
+            s = "1234";
+            Console.WriteLine(s);
 
             #region 作废的测试代码
+
+            //WORD.ApplicationClass applicationClass = null;
+            //WORD.Document doc = null;
+            //object oFalse = false;
+            //object oTrue = true;
+            //var oMissing = Type.Missing;
+            //try
+            //{
+
+            //    applicationClass = new WORD.ApplicationClass();
+            //    applicationClass.GetType();
+            //    doc = applicationClass.Documents.Open(
+            //       "D:\\旧公式.docx",
+            //       ref oFalse, //如果该属性为 True，则当文件不是 Microsoft Word 格式时，将显示“转换文件”对话框。
+            //       ref oTrue, //如果该属性值为 True，则以只读方式打开文档。
+            //       ref oFalse,//如果该属性值为 True，则将文件名添加到“文件”菜单底部最近使用过的文件列表中
+            //       ref oMissing,
+            //       ref oMissing,
+            //       ref oFalse, //控制当 FileName 是一篇打开的文档的名称时应采取的操作。如果该属性值为 True，则放弃对打开文档进行的所有尚未保存的更改，并将重新打开该文件。如果该属性值为 False，则激活打开的文档。
+            //       ref oMissing, ref oMissing,
+            //       ref oMissing, ref oMissing, ref oMissing,
+            //       ref oMissing, ref oMissing,
+            //       ref oMissing, ref oMissing);
+
+            //    var b1 = doc.ActiveWindow.View.ShowDrawings;
+            //    var b2 = doc.ActiveWindow.View.DisplayBackgrounds;
+            //    flag = true;
+            //}
+            //catch (Exception exception)
+            //{
+            //    classLims_NPOI.WriteLog(exception, "");
+            //    flag = false;
+            //}
+            //finally
+            //{
+            //    if (doc != null)
+            //    {
+            //        //关闭WORD文件
+            //        ((WORD._Document)doc).Close(WORD.WdSaveOptions.wdDoNotSaveChanges, Missing.Value, Missing.Value);
+
+            //        doc = null;
+            //    }
+            //    if (applicationClass != null)
+            //    {
+            //        //退出WORD程序
+            //        ((WORD._Application)applicationClass).Quit(Missing.Value, Missing.Value, Missing.Value);
+            //        applicationClass = null;
+            //    }
+            //    GC.Collect();
+            //    GC.WaitForPendingFinalizers();
+            //}
+
+            ////classExcelMthd.ReplaceAll("D:\\默认首页.xls", 1, aSYData);
+            //cem.reportStaticExcel("D:\\省级监督抽查封面.xls", 1, aSYData, false, "");
+
+            //object[] aSYData =
+            //    { new object[] { "&[样品名称]", "防火材料墙板" },
+            //    new object[] { "&[受检单位]", "成都成塑阳光建材有限责任公司" },
+            //    new object[] { "&[生产单位]", "成都川立装饰材料有限公司" },
+            //    new object[] { "&[委托单位]", "----" },
+            //    new object[] { "&[检测类型]", "国家监督专项抽查" },
+            //    new object[] { "&[检验站]", "" },
+            //    new object[] { "&[检验单位]", "成都市产品质量监督检验院" },
+            //    new object[] { "&[任务编号]", "ASHA117Z00002" },
+            //    new object[] { "&[标称生产单位]", "标称生产单位" }};
+
+            //object[] imageArray = new object[]
+            //{ "D:\\公司 CMA川+CAL川+CNAS.jpg", "D:\\成都质检_带logo.png", "D:\\建设工程专用章.jpg","D:\\reportDownload.png" };
+            //object[] aPoint = new object[] {
+            //    new object[] { 15, 5, -1, -1 },//资质章
+            //    new object[] { 415, 175, 60, 60},//报告下载二维码
+            //    new object[] { 15, 80, -1, -1},//建筑方章
+            //    new object[] { 15, 175, 60, 60}//建筑二维码
+            //};
+            //object[] aModelFile = { "D:\\默认封面.xls", "D:\\默认首页.xls", "D:\\3实测值红黄蓝.xls" };
+            //object[] aFMData = { new object[] { "&[任务编号]", "ASHA117Z00005" } };
+            //object[] aSYData = { new object[] { "&[任务编号]", "ASHA117Z00005" }, new object[] { "&[样品名称]", "FUNCK QIANG" } };
+            //object[] aFYData = { new object[] { "&[任务编号]", "ASHA117Z00005" } };
+            //object[] o0 = { "序号", "检测项目", "分析项", "样品", "技术要求",
+            //        "单位", "单项结论", "实测值1", "实测值2", "实测值3" };
+            //object[] o1 = { "1", "抗摆锤冲击能", "抗摆锤冲击能", "1#", "0.8",
+            //        "J", "符合", "a", "a", "a" };
+            //object[] o2 = { "2", "耐跌落性（袋）", "耐跌落性（袋）", "1#", "无渗漏，无破裂",
+            //        "----", "合格", "c", "d", "e" };
+            //object[] o3 = { "3", "甲苯二胺（4%乙酸）", "甲苯二胺（4%乙酸）", "1#", "≤0.004",
+            //        "mg/L", "合格", "未检出", "未检出", "未检出" };
+            //object[] o = { o0, o1, o2, o3 };
+            //object[] colListC = { "检测项目", "单位", "单项结论" };
+            //object[] sc1 = { ";", "；" };
+            //object[] sc2 = { "≦", "≤" };
+            //object[] sc = { sc1, sc2 };
+            //object[] unpH = { };
+            //object[] mergeMark = { "1", "0" };
+            //cem.createOneThreeExcelAndMerge(aModelFile,
+            //    aFMData, imageArray, aPoint,
+            //    aSYData,
+            //    aFYData,
+            //    o, colListC, sc, unpH, mergeMark,
+            //    "D:\\", false);
+
+            //cem.reportCreate_Part("D:\\tt.xls",
+            //    new object[] { "D:\\默认封面.xls", "D:\\默认首页.xls", null }, true, false,
+            //    new object[] { new object[] { "&[任务编号]", "ASHA117Z00006卡卡卡卡看" } }, new object[] { new object[] { "&[任务编号]", "ASHA117Z00006" } },
+            //    null, null, null, null, null, null, false);
+
+            //object[] aModelFile = { "D:\\默认封面.xls", "D:\\默认首页.xls", "D:\\3实测值红黄蓝.xls" };
+            //object[] aFMData = { new object[] { "&[任务编号]", "ASHA117Z00005" } };
+            //object[] aSYData = { new object[] { "&[任务编号]", "ASHA117Z00005" }, new object[] { "&[样品名称]", "FUNCK QIANG" } };
+            //object[] aFYData = { new object[] { "&[任务编号]", "ASHA117Z00005" } };
+            //object[] o0 = { "序号", "检测项目", "分析项", "样品", "技术要求",
+            //        "单位", "单项结论", "实测值1", "实测值2", "实测值3" };
+            //object[] o1 = { "1", "抗摆锤冲击能", "抗摆锤冲击能", "1#", "0.8",
+            //        "J", "符合", "a", "a", "a" };
+            //object[] o2 = { "2", "耐跌落性（袋）", "耐跌落性（袋）", "1#", "无渗漏，无破裂",
+            //        "----", "合格", "c", "d", "e" };
+            //object[] o3 = { "3", "甲苯二胺（4%乙酸）", "甲苯二胺（4%乙酸）", "1#", "≤0.004",
+            //        "mg/L", "合格", "未检出", "未检出", "未检出" };
+            //object[] o = { o0, o1, o2, o3 };
+            //object[] colListC = { "检测项目", "单位", "单项结论" };
+            //object[] sc1 = { ";", "；" };
+            //object[] sc2 = { "≦", "≤" };
+            //object[] sc = { sc1, sc2 };
+            //object[] unpH = { };
+            //object[] mergeMark = { "1", "0" };
+            //cem.createOneThreeExcelAndMerge(aModelFile, aFMData, aSYData, aFYData,
+            //    o, colListC, sc, unpH, mergeMark,
+            //    "D:\\", false);
 
             //cln.reportCoordinateExcel("D:\\省市监督_一栏首页.xls", 0, "D:\\省市监督_一栏首页.xls",
             //    new object[] { new object[] { "H26", "2017-09-26" } },
@@ -128,7 +274,8 @@ namespace nsLims_NPOI
             //    cem.protectWorkSheet(wb, 1, "111",
             //        true, true, true,
             //        false, false, false,
-            //        true,/*允许设置行格式,拉伸行*/  false, false,
+            //        true,/*允许设置行格式,拉伸行*/
+            //false, false,
             //        false, false, false,
             //        false, false, false);
             //    //再还原为普通视图
@@ -387,4 +534,4 @@ namespace nsLims_NPOI
 
 
     }
-}     
+}

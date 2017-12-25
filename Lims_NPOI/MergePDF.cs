@@ -57,7 +57,7 @@ namespace nsLims_NPOI
         public MergePDF()
         {
         }
-        
+
         private void CreateReportPageNum(PdfContentByte pdfContentByte, int pagenum, int nownum, int x, int y)
         {
             Font font = this.GetFont("");
@@ -76,6 +76,64 @@ namespace nsLims_NPOI
             //pdfContentByte.SetTextMatrix((float)width, (float)height);
             //pdfContentByte.ShowText(str);
             pdfContentByte.Stroke();
+        }
+
+        //删除pdf指定的页
+        public bool deletePdfPages(string oldPdf, int pageFrom, int pageTo, string newPdf)
+        {
+            bool flag = false;
+            Document document = null;
+            try
+            {
+                if (oldPdf.Length == 0)
+                {
+                    flag = false;
+                    throw new Exception("删除pdf页时,源文件不存在。");
+                }
+                if (File.Exists(newPdf))
+                {
+                    File.Delete(newPdf);
+                }
+                //设置页面大小
+                document = getSizedDocument();
+
+                PdfWriter instance = PdfWriter.GetInstance(document, new FileStream(newPdf, FileMode.Create));
+                document.Open();
+                PdfContentByte directContent = instance.DirectContent;
+
+                //计算被插入的pdf页数
+                PdfReader oReader = new PdfReader(oldPdf);
+                int oNumberOfPages = oReader.NumberOfPages;
+                for (int i = 1; i <= oNumberOfPages; i++)
+                {
+                    //如果不属于要删除的区域,则直接复制当前页
+                    if (i < pageFrom || i>pageTo)
+                    {
+                        document.NewPage();
+                        if ((int)oReader.GetPageContent(i).Length > 0)
+                        {
+                            directContent.AddTemplate(instance.GetImportedPage(oReader, i), 0f, 0f);
+                        }
+                    }
+                }
+                flag = true;
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+            finally
+            {
+                if (document != null)
+                {
+                    if (document.IsOpen())
+                    {
+                        document.Close();
+                    }
+                    document = null;
+                }
+            }
+            return flag;
         }
 
         //将一个pdf的某一页插入另一个pdf的指定位置,位置索引从1开始
@@ -378,7 +436,7 @@ namespace nsLims_NPOI
 
         //添加图片到pdf,指定坐标和统一的长宽
         /// <summary>
-        /// 添加图片到pdf,指定坐标和统一的长宽
+        /// 添加图片到pdf,指定坐标和统一的长宽,图片添加在第一页
         /// </summary>
         /// <param name="inputfilepath">输入pdf路径</param>
         /// <param name="outputfilepath">输出pdf路径</param>
@@ -450,6 +508,83 @@ namespace nsLims_NPOI
             }
 
 
+        }
+
+        //添加图片到pdf,指定坐标和统一的长宽
+        /// <summary>
+        /// 添加图片到pdf,指定坐标和统一的长宽,图片添加在指定
+        /// </summary>
+        /// <param name="inputfilepath">输入pdf路径</param>
+        /// <param name="pageIndex">页索引</param>
+        /// <param name="outputfilepath">输出pdf路径</param>
+        /// <param name="imgPath">图片路径</param>
+        /// <param name="x">X坐标</param>
+        /// <param name="y">Y坐标</param>
+        /// <param name="widthAndHeight">长宽数值,按像素</param>
+        public void addImageToPdf(string inputfilepath, int pageIndex, string outputfilepath, string imgPath, double x, double y, double widthAndHeight)
+        {
+            PdfReader pdfReader = null;
+            PdfStamper pdfStamper = null;
+            if (inputfilepath == outputfilepath)
+            {
+                classLims_NPOI.WriteLog("输入pdf文件和输出pdf文件不能相同", "");
+                return;
+            }
+            if (File.Exists(outputfilepath))
+            {
+                File.Delete(outputfilepath);
+            }
+            try
+            {
+                pdfReader = new PdfReader(inputfilepath);
+                pdfStamper = new PdfStamper(pdfReader, new FileStream(outputfilepath, FileMode.Create));
+
+                int total = pdfReader.NumberOfPages;
+                if (total < pageIndex) return;
+                Image img = Image.GetInstance(imgPath);
+                if (img.DpiX != img.DpiY)
+                {
+                    classLims_NPOI.WriteLog("图片文件横向纵向分辨率不同,无法处理", "");
+                    return;
+                }
+                if (img.Width != img.Height)
+                {
+                    classLims_NPOI.WriteLog("图片文件横向纵向像素数值不同,不适用于添加二维码", "");
+                    return;
+                }
+                var Alignment = Image.ALIGN_LEFT;
+                img.Alignment = Alignment;
+                //设置缩放尺寸
+                float scalePct = (float)widthAndHeight / img.Width;
+                img.ScalePercent(scalePct * 100);
+                //img.Height = img.Height * 0.24f;
+                float width = img.Width * scalePct;
+                float height = img.Height * scalePct;
+                img.SetAbsolutePosition((float)x, (float)y);//设置图片坐标
+
+                PdfContentByte content;
+                PdfGState gs = new PdfGState();
+                content = pdfStamper.GetOverContent(pageIndex);//在内容上方加水印,起始索引为1
+                float f1 = content.XTLM;
+                float f2 = content.WordSpacing;
+                gs.FillOpacity = 1;//透明度,0为透明,1为完全不透明
+                content.SetGState(gs);
+                content.AddImage(img);
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return;
+            }
+            finally
+            {
+                if (pdfStamper != null)
+                    pdfStamper.Close();
+
+                if (pdfReader != null)
+                    pdfReader.Close();
+            }
+            
         }
 
         //添加图片到pdf,指定坐标和长宽
@@ -1022,7 +1157,7 @@ namespace nsLims_NPOI
             processInstance.StartInfo = startInfo;
             processInstance.Start();
         }
-        
+
 
         //替换pdf的其中一页
         public string replaceOnePage(string oldPdf, int oldIndex, string onePage, string newPdf)
@@ -1058,9 +1193,8 @@ namespace nsLims_NPOI
                         document.NewPage();
                         directContent.AddTemplate(instance.GetImportedPage(pdfReader, j), 0f, 0f);
                     }
-                    else if (j == oldIndex && (int)pdfReader.GetPageContent(j).Length > 0)
+                    else if (j == oldIndex && (int)pdfReader.GetPageContent(j).Length > 0)//加载新的pdf并替换此页为新的pdf
                     {
-                        //加载新的pdf并提取第一页
                         PdfReader onePdfPage = new PdfReader(onePage);
                         document.NewPage();
                         directContent.AddTemplate(instance.GetImportedPage(onePdfPage, 1), 0f, 0f);
@@ -1848,41 +1982,41 @@ namespace nsLims_NPOI
             return flag;
         }
 
-    //    private class PdfReplacer
-    //    {
-    //        private int fontSize;
-    //        private Dictionary<String, ReplaceRegion> replaceRegionMap = new Dictionary<String, ReplaceRegion>();
-    //        private Dictionary<String, Object> replaceTextMap = new Dictionary<String, Object>();
-    //        //private ByteArrayOutputStream output;
-    //        private PdfReader reader;
-    //        private PdfStamper stamper;
-    //        private PdfContentByte canvas;
-    //        private Font font;
+        //    private class PdfReplacer
+        //    {
+        //        private int fontSize;
+        //        private Dictionary<String, ReplaceRegion> replaceRegionMap = new Dictionary<String, ReplaceRegion>();
+        //        private Dictionary<String, Object> replaceTextMap = new Dictionary<String, Object>();
+        //        //private ByteArrayOutputStream output;
+        //        private PdfReader reader;
+        //        private PdfStamper stamper;
+        //        private PdfContentByte canvas;
+        //        private Font font;
 
-    //        public PdfReplacer(String fileName)
-    //        {
-    //            FileStream fIn = null;
-    //            try{
-    //                    fIn = new FileStream(fileName, FileMode.Open);
-                    
-    //                    byte[] pdfBytes = File.ReadAllBytes(fileName);
-    //                    //init(pdfBytes);
-    //                    //ReplaceRegion
-    //                }
-    //            finally{
-    //                fIn.Close();
-    //            }
-    //        }
+        //        public PdfReplacer(String fileName)
+        //        {
+        //            FileStream fIn = null;
+        //            try{
+        //                    fIn = new FileStream(fileName, FileMode.Open);
 
-    //        private void init(byte[] pdfBytes)
-    //        {   
-    //            reader = new PdfReader(pdfBytes);
-    //                output = new ByteArrayOutputStream();
-    //                stamper = new PdfStamper(reader, output);
-    //                canvas = stamper.getOverContent(1);  
-    //            setFont(10);
-    //                logger.info("初始化成功");  
-    //        }
-    //}
+        //                    byte[] pdfBytes = File.ReadAllBytes(fileName);
+        //                    //init(pdfBytes);
+        //                    //ReplaceRegion
+        //                }
+        //            finally{
+        //                fIn.Close();
+        //            }
+        //        }
+
+        //        private void init(byte[] pdfBytes)
+        //        {   
+        //            reader = new PdfReader(pdfBytes);
+        //                output = new ByteArrayOutputStream();
+        //                stamper = new PdfStamper(reader, output);
+        //                canvas = stamper.getOverContent(1);  
+        //            setFont(10);
+        //                logger.info("初始化成功");  
+        //        }
+        //}
     }
 }
