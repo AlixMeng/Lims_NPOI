@@ -3066,11 +3066,13 @@ namespace nsLims_NPOI
                         }
 
                     }
+                    //int actuSheetCount = wb.Sheets.Count;
+                    //int nowSheetIndex = sySheetIndex;
+                    //classLims_NPOI.WriteLog("actuSheetCount:nowSheetIndex__"+ actuSheetCount.ToString()+":"+nowSheetIndex.ToString(), "");
                     addImagesToExcel_byOffice(wb, sySheetIndex, aImageField);//首页添加签名图片
                     FileConvertClass.SaveExcelWorkbookAsPDFWithPage(wb, toPdf, 1, 2);
                     wb.Save();//保存工作簿;
                 }
-
 
             }
             catch (Exception ex)
@@ -3504,19 +3506,9 @@ namespace nsLims_NPOI
                 int maxRowIndex = getSheetMaxRowCol(sheet).X;
 
                 string[] tableHead = classLims_NPOI.dArray2String1((object[])dArray[0]);//最开始的行为表头
-                //var ssTableHead = "";
-                //for (int i=0;i<tableHead.Length;i++)
-                //{
-                //    ssTableHead += tableHead[i] + ", ";
-                //}
-                //classLims_NPOI.WriteLog(ssTableHead, "");
+                
                 int[] colHeadSeq = getArraySequen(sheet, tableHead, "&[", "]", maxRowIndex, maxColIndex); //获取表头在模板中的顺序,表头数据无标记符号&[],需要添加
-                //var sTableHead = "";
-                //for (int i = 0; i < colHeadSeq.Length; i++)
-                //{
-                //    sTableHead += colHeadSeq[i].ToString() + ", ";
-                //}
-                //classLims_NPOI.WriteLog(sTableHead, "");
+               
                 object[,] seqArray2 = getSequenArray2(colHeadSeq, classLims_NPOI.dArray2Array2(dArray));//获取排序后的二维数组
                 //Dictionary<int, string[]> dic = classLims_NPOI.dArray2ToDictionary2(seqArray2);
 

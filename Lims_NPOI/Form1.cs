@@ -56,7 +56,7 @@ namespace nsLims_NPOI
             button1.Enabled = false;
             string s;
 
-            classLims_NPOI cln = new classLims_NPOI();
+            //classLims_NPOI cln = new classLims_NPOI();
             //ConvertbyPrinter cbp = new ConvertbyPrinter();
             classExcelMthd cem = new classExcelMthd();
             //ImgConvert ic = new ImgConvert();
@@ -64,12 +64,26 @@ namespace nsLims_NPOI
             //MergePDF mpf = new MergePDF();
             //FileConvertClass fcc = new FileConvertClass();
 
+
             object[] aSYData =
                 {
-                new object[] { "&[方法编码]", "EXCEL.Workbooks workBooks\nnew EXCEL.ApplicationClass" }//
+                new object[] { "&{签发日期}", "2017-12-26" },
+                new object[] { "&{总页数}", "18" }
             };
-            //cem.reportStaticExcel("D:\\Excel原始记录.xlsx", 1, aSYData, false, "");
-            cln.reportStaticExcel("D:\\Excel原始记录.xls", 0, "D:\\Excel原始记录111.xls", aSYData);
+            object[] aImage =
+                {
+                new object[] { "&{主检}", "D:\\ding.du.jpg" },
+                new object[] { "&{二审}", "D:\\weic.jpg" },
+                new object[] { "&{终审}", "D:\\YINIXN.jpg" },
+            };
+            object[]  aProtectParam = new object[] {
+			false, true, true,//本行第一个参数代表是否锁定编辑对象,锁定后无法插入图片;
+            true, true, true,//本行第二个参数代表是否可设置单元格格式,最后一个参数代表可否拉伸列宽;
+            true, false, false,//本行第一个参数代表允许拉伸行高;
+            false, false, false,
+            false, false, false};
+            cem.reportApproved("D:\\AGXA117W00034.xls", 2, "D:\\Excel原始记录111.pdf",
+                aSYData, aImage, "wlzx@01", aProtectParam);
             //object missing = System.Reflection.Missing.Value;
             //EXCEL.ApplicationClass excel = null;
             //EXCEL.Workbook wb = null;
@@ -79,14 +93,11 @@ namespace nsLims_NPOI
             //    excel = new EXCEL.ApplicationClass();
             //    excel.DisplayAlerts = false;
             //    workBooks = excel.Workbooks;
-            //    wb = workBooks.Open("D:\\test.xls", missing, missing,
+            //    wb = workBooks.Open("D:\\AGXA117W00034.xls", missing, missing,
             //        missing, missing, missing, missing, missing,
             //        missing, missing, missing, missing, missing,
             //        missing, missing);
-
-            //    cem.unprotectWorkSheet(wb, 1, "wlzx@01");
-
-            //    wb.Save();
+            //    EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Sheets[2];
             //}
             //catch (Exception ex)
             //{
