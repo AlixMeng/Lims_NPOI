@@ -394,6 +394,35 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
+        /// 按照标记找到range单元格名,如"[test1]"所在单元格为H2,则返回"H2",找到所有为[test1]的单元格名
+        /// </summary>
+        /// <param name="filePath">Excel文件路径</param>
+        /// <param name="sheetIndex">sheet索引</param>
+        /// <param name="imgFlag">标记字符串</param>
+        /// <returns>例如"H2"</returns>
+        public List<string> getExcelRangeByFlagAll(string filePath, int sheetIndex, string imgFlag)
+        {
+            List<Point> listPoint = selectPositionAll(loadExcelSheetI(filePath, sheetIndex), imgFlag);
+            List<string> rangeNameList = new List<string>();
+            for (int i = 0; i < listPoint.Count; i++)
+            {
+                System.Drawing.Point p = listPoint[i];
+                if (p.X < 0 || p.Y < 0)
+                {
+                    WriteLog("classLims_NPOI.getExcelRangeByFlag 方法下标记字符串未找到\n", "");
+                    return rangeNameList;
+                }
+                else
+                {
+                    var tempCol = classLims_NPOI.NumberToSystem26(p.Y + 1);
+                    string rangeName = tempCol + (p.X + 1).ToString();
+                    rangeNameList.Add(rangeName);
+                }
+            }
+            return rangeNameList;
+        }
+
+        /// <summary>
         /// 返回sheet总页数
         /// </summary>
         /// <param name="sheet"></param>
@@ -3682,6 +3711,30 @@ namespace nsLims_NPOI
             }
         }
 
+        /// <summary>
+        /// 导出静态报表,数据为object[]格式，替换Excel所有sheet页
+        /// </summary>
+        /// <param name="modlePath">模板文件路径</param>
+        /// <param name="targetPath">目标文件路径</param>
+        /// <param name="dArray">object[]数据</param>        
+        /// <returns>是否成功</returns>
+        public Boolean reportStaticExcelAll(string modlePath, string targetPath, object[] dArray)
+        {
+            IWorkbook wb = loadExcelWorkbookI(modlePath);
+            int sheetNumber = wb.NumberOfSheets;
+            Boolean flag = false;
+            for (int sheetIndex = 0; sheetIndex < sheetNumber; sheetIndex++)
+            {
+                string sheetName = loadExcelWorkbookI(modlePath).GetSheetName(sheetIndex);
+                flag = reportStaticExcel(modlePath, sheetName, targetPath, dArray);
+                if (!flag)
+                {
+                    continue;
+                }
+            }
+            return flag;
+        }
+
         #region 废弃的写入图片方法
         ////导出带一组图片的excel
         ///// <summary>
@@ -3770,6 +3823,52 @@ namespace nsLims_NPOI
             {
                 WriteLog(ex, "");
                 return p;
+            }
+        }
+
+        /// <summary>
+        /// 查询值在sheet的位置,X:行号,Y:列号，查找所有位置
+        /// </summary>
+        /// <param name="sheet">工作表名</param>
+        /// <param name="value">标志字符串</param>
+        /// <returns>Point对象,X:行号,Y:列号</returns>
+        public static List<Point> selectPositionAll(ISheet sheet, string value)
+        {
+            Point p = new Point();
+            List<Point> pointList = new List<Point>();
+            p.X = -1;
+            p.Y = -1;
+            try
+            {
+                int minRow = sheet.FirstRowNum;
+                int maxRow = sheet.LastRowNum;
+                for (int i = minRow; i <= maxRow; i++)
+                {
+                    IRow row = (IRow)sheet.GetRow(i);
+                    if (row == null)
+                    {
+                        continue;
+                    }
+                    for (int j = row.FirstCellNum; j < row.LastCellNum; j++)
+                    {
+                        ICell cell = (ICell)row.GetCell(j);
+                        if (cell == null)
+                            continue;
+                        string cellValue = getCellStringValueAllCase(cell);
+                        if (cellValue.IndexOf(value) > -1)
+                        {
+                            p.X = i;
+                            p.Y = j;
+                            pointList.Add(p);
+                        }
+                    }
+                }
+                return pointList;
+            }
+            catch (Exception ex)
+            {
+                WriteLog(ex, "");
+                return pointList;
             }
         }
 

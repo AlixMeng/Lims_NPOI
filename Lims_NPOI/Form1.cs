@@ -65,69 +65,76 @@ namespace nsLims_NPOI
             //FileConvertClass fcc = new FileConvertClass();
 
 
-            object[] aSYData =
-                {
-                new object[] { "&{签发日期}", "2017-12-26" },
-                new object[] { "&{总页数}", "18" }
-            };
-            object[] aImage =
-                {
-                new object[] { "&{主检}", "D:\\ding.du.jpg" },
-                new object[] { "&{二审}", "D:\\weic.jpg" },
-                new object[] { "&{终审}", "D:\\YINIXN.jpg" },
-            };
-            object[]  aProtectParam = new object[] {
-			false, true, true,//本行第一个参数代表是否锁定编辑对象,锁定后无法插入图片;
-            true, true, true,//本行第二个参数代表是否可设置单元格格式,最后一个参数代表可否拉伸列宽;
-            true, false, false,//本行第一个参数代表允许拉伸行高;
-            false, false, false,
-            false, false, false};
-            cem.reportApproved("D:\\AGXA117W00034.xls", 2, "D:\\Excel原始记录111.pdf",
-                aSYData, aImage, "wlzx@01", aProtectParam);
-            //object missing = System.Reflection.Missing.Value;
-            //EXCEL.ApplicationClass excel = null;
-            //EXCEL.Workbook wb = null;
-            //EXCEL.Workbooks workBooks = null;
-            //try
-            //{
-            //    excel = new EXCEL.ApplicationClass();
-            //    excel.DisplayAlerts = false;
-            //    workBooks = excel.Workbooks;
-            //    wb = workBooks.Open("D:\\AGXA117W00034.xls", missing, missing,
-            //        missing, missing, missing, missing, missing,
-            //        missing, missing, missing, missing, missing,
-            //        missing, missing);
-            //    EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Sheets[2];
-            //}
-            //catch (Exception ex)
-            //{
-            //    classLims_NPOI.WriteLog(ex, "");
-            //}
-            //finally
-            //{
-            //    if (wb != null)
-            //    {
-            //        //wb.Close(false, missing, false);
-            //        wb.Close(false, missing, missing);
-            //        int i = Marshal.ReleaseComObject(wb);
-            //        wb = null;
-            //    }
-            //    if (workBooks != null)
-            //    {
-            //        workBooks.Close();
-            //        int i = Marshal.ReleaseComObject(workBooks);
-            //        workBooks = null;
-            //    }
-            //    if (excel != null)
-            //    {
-            //        excel.Quit();
-            //        int i = Marshal.ReleaseComObject(excel);
-            //        excel = null;
-            //    }
-            //    GC.Collect();
-            //    GC.WaitForPendingFinalizers();
+            object[] o0 = { "序号", "检测项目", "分析项", "样品", "技术要求",
+                    "单位", "单项结论", "实测值" };
+            object[] o11 = { "1", "抗摆锤冲击能", "抗摆锤冲击能1", "1#", "总量≦50",
+                    "J", "符合", "12.3",};
+            object[] o12 = { "1", "抗摆锤冲击能", "抗摆锤冲击能2", "1#", "总量≦50",
+                    "J", "符合", "14.3",};
+            object[] o13 = { "1", "抗摆锤冲击能", "抗摆锤冲击能3", "1#", "总量≦50",
+                    "J", "符合", "22.3",};
+            object[] o2 = { "2", "耐跌落性（袋）", "耐跌落性（袋）", "1#", "无渗漏，无破裂",
+                    "----", "合格", "c" };
+            object[] o3 = { "3", "甲苯二胺（4%乙酸）", "甲苯二胺（4%乙酸）", "1#", "≤0.004",
+                    "mg/L", "合格", "未检出" };
+            object[] o = { o0, o11,o12,o13, o2, o3 };
+            object[] colListC = { "检测项目", "单位", "单项结论" };
+            object[] sc1 = { ";", "；" };
+            object[] sc2 = { "≦", "≤" };
+            object[] sc = { sc1, sc2 };
+            object[] unpH = { };
+            object[] mergeMark = { "1", "0" };
+            //cem.reportFy("D:\\18583溶剂型胶粘剂附页.xls", 1, o, 
+            //    colListC, sc, unpH,
+            //    mergeMark, false);
 
-            //}
+            object missing = System.Reflection.Missing.Value;
+            EXCEL.ApplicationClass excel = null;
+            EXCEL.Workbook wb = null;
+            EXCEL.Workbooks workBooks = null;
+            try
+            {
+                excel = new EXCEL.ApplicationClass();
+                excel.DisplayAlerts = false;
+                workBooks = excel.Workbooks;
+                wb = workBooks.Open("D:\\默认附页_备注.xls", missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing, missing, missing, missing,
+                    missing, missing);
+
+                cem.reportFy(wb, 1, o, colListC, sc, unpH, mergeMark, false, "", false, null);
+                wb.Save();
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+            finally
+            {
+                if (wb != null)
+                {
+                    //wb.Close(false, missing, false);
+                    wb.Close(false, missing, missing);
+                    int i = Marshal.ReleaseComObject(wb);
+                    wb = null;
+                }
+                if (workBooks != null)
+                {
+                    workBooks.Close();
+                    int i = Marshal.ReleaseComObject(workBooks);
+                    workBooks = null;
+                }
+                if (excel != null)
+                {
+                    excel.Quit();
+                    int i = Marshal.ReleaseComObject(excel);
+                    excel = null;
+                }
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+            }
+
             s = "1234";
             Console.WriteLine(s);
 

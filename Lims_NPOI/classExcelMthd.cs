@@ -46,6 +46,7 @@ namespace nsLims_NPOI
         {
             object missing = System.Reflection.Missing.Value;
             EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
+            sheet.Select();
             if (rangeName.Equals(""))
             {
                 return "";
@@ -735,6 +736,251 @@ namespace nsLims_NPOI
             catch (Exception ex)
             {
                 classLims_NPOI.WriteLog(ex, "");
+                flag = false;
+            }
+            return flag;
+
+        }
+
+        /// <summary>
+        /// 添加图片到指定excel,图片指定大小,使用office的com组件, 批量添加;  添加标记图片
+        ///      在签名图片高度保持0.9cm( 25.4磅)的情况下,要求图片宽高比不能高于黄金比例(0.618),否则将盖不住标记字符串
+        /// </summary>
+        /// <param name="workbookPath">源工作簿路径</param>
+        /// <param name="sheetIndex">工作表sheet索引</param>
+        /// <param name="dArray">图片添加位置标记和图片文件路径数组,如{{"[主检]","D:\\123.png"}}</param>
+        /// <param name="PicWidth">图片宽度,无实际意义,实际值是按高度和图片比例计算出来的</param>
+        /// <param name="PicHeight">图片高度</param>
+        /// <returns></returns>
+        public bool addImagesToExcel_byOfficeAll(string workbookPath, int sheetIndex, object[] dArray, double PicWidth, double PicHeight)
+        {
+            bool flag = true;
+            try
+            {
+                if (!File.Exists(workbookPath))
+                {
+                    return false;
+                }
+                //object missing = Type.Missing;
+                object missing = System.Reflection.Missing.Value;
+
+                //按照标记找到位置
+                Dictionary<string, string> dictionary = classLims_NPOI.dArray2Dictionary(dArray);
+                List<string[]> rangeNameList = new List<string[]>();
+                foreach (var oneMapPoint in dictionary)//循环遍历图片
+                {
+                    string key = oneMapPoint.Key.ToString();
+                    string value = oneMapPoint.Value.ToString();
+                    List<string> rangeNameArr = new classLims_NPOI().getExcelRangeByFlagAll(workbookPath, sheetIndex, key);//找到图片标记的所有坐标
+                    for (int k = 0; k < rangeNameArr.Count; k++)//判断标记是否找到
+                    {
+                        string rangeName = rangeNameArr[k];
+                        if (rangeName == null || rangeName == "")
+                        {
+                            classLims_NPOI.WriteLog("标记字符串:" + key + " 未检测到!", "");
+                            rangeNameList.Add(new string[] { "", "", "" });
+                        }
+                        else
+                        {
+                            rangeNameList.Add(new string[] { rangeName, key, value });
+                        }
+                    }
+                }
+
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbook wb = null;
+                EXCEL.Workbooks workBooks = null;
+                try
+                {
+                    excel = new EXCEL.ApplicationClass();
+                    excel.DisplayAlerts = false;
+                    workBooks = excel.Workbooks;
+                    wb = workBooks.Open(workbookPath, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing);
+                    //实例化Sheet后,释放Excel进程就会失败
+                    //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+                    //按照标记找到位置并插入图片
+
+                    for (int k = 0; k < rangeNameList.Count; k++)
+                    {
+                        string rangeName = rangeNameList[k][0];
+                        string key = rangeNameList[k][1];
+                        string value = rangeNameList[k][2];
+                        //应该是签名图片高度固定,但宽度会等比例缩放
+                        System.Drawing.Image image = System.Drawing.Image.FromFile(value);
+                        var imageWidth = image.Width;
+                        var imageHeight = image.Height;
+                        PicWidth = PicHeight * imageWidth / imageHeight;
+
+                        addImageToSheet(workbookPath, wb, sheetIndex + 1, rangeName, value, key, PicWidth, PicHeight);
+                    }
+
+                    wb.Save();
+
+                }
+                catch (Exception ex)
+                {
+                    classLims_NPOI.WriteLog(ex, "");
+                    flag = false;
+                }
+                finally
+                {
+                    if (wb != null)
+                    {
+                        //wb.Close(false, missing, false);
+                        wb.Close(false, missing, missing);
+                        int i = Marshal.ReleaseComObject(wb);
+                        wb = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        int i = Marshal.ReleaseComObject(workBooks);
+                        workBooks = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        int i = Marshal.ReleaseComObject(excel);
+                        excel = null;
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                }
+            }
+            catch (Exception e)
+            {
+                classLims_NPOI.WriteLog(e, "");
+                flag = false;
+            }
+            return flag;
+
+        }
+
+        /// <summary>
+        /// 遍历所有sheet页
+        /// 添加图片到指定excel,图片指定大小,使用office的com组件, 批量添加;  添加标记图片
+        ///      在签名图片高度保持0.9cm( 25.4磅)的情况下,要求图片宽高比不能高于黄金比例(0.618),否则将盖不住标记字符串
+        /// </summary>
+        /// <param name="workbookPath">源工作簿路径</param>
+        /// <param name="dArray">图片添加位置标记和图片文件路径数组,如{{"[主检]","D:\\123.png"}}</param>
+        /// <param name="PicWidth">图片宽度,无实际意义,实际值是按高度和图片比例计算出来的</param>
+        /// <param name="PicHeight">图片高度</param>
+        /// <returns></returns>
+        public bool addImagesToExcel_byOfficeAllSheet(string workbookPath, object[] dArray, double PicWidth, double PicHeight)
+        {
+            bool flag = true;
+            try
+            {
+                if (!File.Exists(workbookPath))
+                {
+                    return false;
+                }
+                //object missing = Type.Missing;
+                object missing = System.Reflection.Missing.Value;
+
+                //遍历sheet页
+                classLims_NPOI cem = new classLims_NPOI();
+                int sheetNumber = cem.loadExcelWorkbookI(workbookPath).NumberOfSheets;
+                //按照标记找到位置
+                Dictionary<string, string> dictionary = classLims_NPOI.dArray2Dictionary(dArray);
+                List<string[]> rangeNameList = new List<string[]>();
+                for (int sheetIndex = 0; sheetIndex < sheetNumber; sheetIndex++)
+                {
+
+                    foreach (var oneMapPoint in dictionary)//循环遍历图片
+                    {
+                        string key = oneMapPoint.Key.ToString();
+                        string value = oneMapPoint.Value.ToString();
+                        List<string> rangeNameArr = new classLims_NPOI().getExcelRangeByFlagAll(workbookPath, sheetIndex, key);//找到图片标记的所有坐标
+                        for (int k = 0; k < rangeNameArr.Count; k++)//判断标记是否找到
+                        {
+                            string rangeName = rangeNameArr[k];
+                            if (rangeName == null || rangeName == "")
+                            {
+                                classLims_NPOI.WriteLog("标记字符串:" + key + " 未检测到!", "");
+                                rangeNameList.Add(new string[] { "", "", "", "0" });
+                            }
+                            else
+                            {
+                                rangeNameList.Add(new string[] { rangeName, key, value, sheetIndex.ToString() });
+                            }
+                        }
+                    }
+
+                }
+
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbook wb = null;
+                EXCEL.Workbooks workBooks = null;
+                try
+                {
+                    excel = new EXCEL.ApplicationClass();
+                    excel.DisplayAlerts = false;
+                    workBooks = excel.Workbooks;
+                    wb = workBooks.Open(workbookPath, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing);
+                    //实例化Sheet后,释放Excel进程就会失败
+                    //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+                    //按照标记找到位置并插入图片
+
+                    for (int k = 0; k < rangeNameList.Count; k++)
+                    {
+                        string rangeName = rangeNameList[k][0];
+                        string key = rangeNameList[k][1];
+                        string value = rangeNameList[k][2];
+                        int sheetIndex = Convert.ToInt32(rangeNameList[k][3]);
+                        //应该是签名图片高度固定,但宽度会等比例缩放
+                        System.Drawing.Image image = System.Drawing.Image.FromFile(value);
+                        var imageWidth = image.Width;
+                        var imageHeight = image.Height;
+                        PicWidth = PicHeight * imageWidth / imageHeight;
+
+                        addImageToSheet(workbookPath, wb, sheetIndex + 1, rangeName, value, key, PicWidth, PicHeight);
+                    }
+
+                    wb.Save();
+
+                }
+                catch (Exception ex)
+                {
+                    classLims_NPOI.WriteLog(ex, "");
+                    flag = false;
+                }
+                finally
+                {
+                    if (wb != null)
+                    {
+                        //wb.Close(false, missing, false);
+                        wb.Close(false, missing, missing);
+                        int i = Marshal.ReleaseComObject(wb);
+                        wb = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        int i = Marshal.ReleaseComObject(workBooks);
+                        workBooks = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        int i = Marshal.ReleaseComObject(excel);
+                        excel = null;
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                }
+            }
+            catch (Exception e)
+            {
+                classLims_NPOI.WriteLog(e, "");
                 flag = false;
             }
             return flag;
@@ -3526,6 +3772,17 @@ namespace nsLims_NPOI
                 {
                     ((EXCEL.Range)sheet.Rows[row + 1]) //向下,   从上方 和/或 左侧单元格复制格式。
                         .Insert(EXCEL.XlDirection.xlDown, EXCEL.XlInsertFormatOrigin.xlFormatFromLeftOrAbove);
+
+                    //复制行格式,使用格式刷功能,格式按照标记行为准
+                    EXCEL.Range oldRange = (EXCEL.Range)sheet.Rows[row];//标记行所在索引为 row
+                    EXCEL.Range newRange = (EXCEL.Range)sheet.Rows[row + 1];
+                    oldRange.Copy();
+                    newRange.Select();
+                    newRange.PasteSpecial(
+                        EXCEL.XlPasteType.xlPasteFormats,//选择性粘贴(格式)
+                        EXCEL.XlPasteSpecialOperation.xlPasteSpecialOperationNone,//粘贴时不进行运算
+                        null,//不跳过空单元格
+                        false);//不转置,即不进行行列互换
                 }
                 //直接填充数组
                 EXCEL.Range rTable = sheet.Range[sheet.Cells[row, col], sheet.Cells[row + seqArray2.GetLength(0) - 1, maxColIndex]];
