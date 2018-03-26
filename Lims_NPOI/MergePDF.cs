@@ -233,6 +233,36 @@ namespace nsLims_NPOI
 
         }
 
+        //pdf页是否为横放
+        public bool isHorizontal(string oldPdf, int pageIndex)
+        {
+            PdfReader pdfReader = null;
+            try
+            {
+                pdfReader = new PdfReader(oldPdf);
+              
+                int n = pdfReader.NumberOfPages; // 获取源文件的页数         
+                if(pageIndex <= n)
+                {
+                    Rectangle rectangle = pdfReader.GetPageSize(pageIndex);
+                    if (rectangle.Height < rectangle.Width)
+                        return true;
+                    else
+                        return false;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+                return false;
+            }
+            finally
+            {
+                if (pdfReader != null)
+                    pdfReader.Close();
+            }
+        }
         /// <summary>
         /// 指定长宽的签名
         /// </summary>
@@ -1210,6 +1240,34 @@ namespace nsLims_NPOI
                 Console.Error.WriteLine(exception.StackTrace);
             }
             return "";
+        }
+
+        //PDF页面旋转,顺时针角度
+        public void rotate(string oldPdf, string newPdf, int beginPage, int endPage, int angle)
+        {
+            PdfReader reader = new PdfReader(oldPdf); // 读取源文件 
+            Document document = new Document(); // 建立文档
+                                                /*
+                                                切勿将源文件和输出文件使用一个路径，否则会出现异常：io.FileNotFoundException: d:\1.pdf 
+                                                (请求的操作无法在使用用户映射区域打开的文件上执行。)
+                                                */
+            PdfCopy p = new PdfSmartCopy(document, File.Create(newPdf)); // 生成的目标PDF文件
+            document.Open();
+            int n = reader.NumberOfPages; // 获取源文件的页数
+            PdfDictionary pd;
+            if (beginPage == -1) beginPage = 1;
+            if (endPage == -1) endPage = n;
+            for (int j = beginPage; j <= n && j<= endPage; j++)
+            {
+                pd = reader.GetPageN(j);
+                pd.Put(PdfName.ROTATE, new PdfNumber(angle)); // 顺时针旋转90°
+            }
+            for (int page = 0; page < n;)
+            {
+                p.AddPage(p.GetImportedPage(reader, ++page));
+            }
+            document.Close();
+            p.Close();
         }
 
         public int GetPageCount(string[] fileList)

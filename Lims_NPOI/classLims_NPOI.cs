@@ -3725,12 +3725,8 @@ namespace nsLims_NPOI
             Boolean flag = false;
             for (int sheetIndex = 0; sheetIndex < sheetNumber; sheetIndex++)
             {
-                string sheetName = loadExcelWorkbookI(modlePath).GetSheetName(sheetIndex);
-                flag = reportStaticExcel(modlePath, sheetName, targetPath, dArray);
-                if (!flag)
-                {
-                    continue;
-                }
+                string sheetName = wb.GetSheetName(sheetIndex);
+                flag = reportStaticExcel(modlePath, sheetName, targetPath, dArray);               
             }
             return flag;
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -11,6 +12,8 @@ using NPOI.XSSF.UserModel;
 using wsdlLib;
 using EXCEL = Microsoft.Office.Interop.Excel;
 using WORD = Microsoft.Office.Interop.Word;
+using System.Text.RegularExpressions;
+using System.Drawing;
 
 namespace nsLims_NPOI
 {
@@ -49,8 +52,7 @@ namespace nsLims_NPOI
                 MessageBox.Show(s);
             }
         }
-
-
+        
         private void button1_Click(object sender, EventArgs e)
         {
             button1.Enabled = false;
@@ -63,82 +65,160 @@ namespace nsLims_NPOI
             //DocXAction dxa = new DocXAction();
             //MergePDF mpf = new MergePDF();
             //FileConvertClass fcc = new FileConvertClass();
+            
+            object[] o0 = { "序号", "检测项目",         "分析项",            "样品", "单位",  "技术要求", "实测值",                  "单项结论" };
+            object[] o1 = { "1",    "绝缘最薄处厚度",   "绝缘最薄处厚度",    "1#",   "mm",     "≥0.62",  "P^(u1)S-V_(d1)S^(u2)kk",  "P" };
+            object[] o2 = { "2",    "导体电阻（20℃）", "导体电阻（20℃）",  "1#",   "Ω/ km", "≤7.41",  "X^(u1)S-C_(d1)S^(u2)mm",  "P" };
 
-
-            object[] o0 = { "序号", "检测项目", "分析项", "样品", "技术要求",
-                    "单位", "单项结论", "实测值" };
-            object[] o11 = { "1", "抗摆锤冲击能", "抗摆锤冲击能1", "1#", "总量≦50",
-                    "J", "符合", "12.3",};
-            object[] o12 = { "1", "抗摆锤冲击能", "抗摆锤冲击能2", "1#", "总量≦50",
-                    "J", "符合", "14.3",};
-            object[] o13 = { "1", "抗摆锤冲击能", "抗摆锤冲击能3", "1#", "总量≦50",
-                    "J", "符合", "22.3",};
-            object[] o2 = { "2", "耐跌落性（袋）", "耐跌落性（袋）", "1#", "无渗漏，无破裂",
-                    "----", "合格", "c" };
-            object[] o3 = { "3", "甲苯二胺（4%乙酸）", "甲苯二胺（4%乙酸）", "1#", "≤0.004",
-                    "mg/L", "合格", "未检出" };
-            object[] o = { o0, o11,o12,o13, o2, o3 };
-            object[] colListC = { "检测项目", "单位", "单项结论" };
-            object[] sc1 = { ";", "；" };
-            object[] sc2 = { "≦", "≤" };
-            object[] sc = { sc1, sc2 };
+            object[] o = { o0, o1, o2 };
+            object[] colListC = { "序号", "检测项目", "分析项", "单项结论" };
+            object[] sc1 = { ")", "）" };
+            object[] sc2 = { "(", "（" };
+            object[] specialChars = { sc1, sc2 };
             object[] unpH = { };
-            object[] mergeMark = { "1", "0" };
-            //cem.reportFy("D:\\18583溶剂型胶粘剂附页.xls", 1, o, 
-            //    colListC, sc, unpH,
-            //    mergeMark, false);
+            object[] mergeMark = { "0", "0" };
 
-            object missing = System.Reflection.Missing.Value;
-            EXCEL.ApplicationClass excel = null;
-            EXCEL.Workbook wb = null;
-            EXCEL.Workbooks workBooks = null;
-            try
-            {
-                excel = new EXCEL.ApplicationClass();
-                excel.DisplayAlerts = false;
-                workBooks = excel.Workbooks;
-                wb = workBooks.Open("D:\\默认附页_备注.xls", missing, missing,
-                    missing, missing, missing, missing, missing,
-                    missing, missing, missing, missing, missing,
-                    missing, missing);
+            //object missing = Missing.Value;
+            //EXCEL.ApplicationClass excel = null;
+            //EXCEL.Workbook wb = null;
+            //EXCEL.Workbooks workBooks = null;
+            //try
+            //{
+            //    excel = new EXCEL.ApplicationClass();
+            //    excel.DisplayAlerts = false;
+            //    workBooks = excel.Workbooks;
+            //    wb = workBooks.Open("D:\\默认附页.xls", missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing);
 
-                cem.reportFy(wb, 1, o, colListC, sc, unpH, mergeMark, false, "", false, null);
-                wb.Save();
-            }
-            catch (Exception ex)
-            {
-                classLims_NPOI.WriteLog(ex, "");
-            }
-            finally
-            {
-                if (wb != null)
-                {
-                    //wb.Close(false, missing, false);
-                    wb.Close(false, missing, missing);
-                    int i = Marshal.ReleaseComObject(wb);
-                    wb = null;
-                }
-                if (workBooks != null)
-                {
-                    workBooks.Close();
-                    int i = Marshal.ReleaseComObject(workBooks);
-                    workBooks = null;
-                }
-                if (excel != null)
-                {
-                    excel.Quit();
-                    int i = Marshal.ReleaseComObject(excel);
-                    excel = null;
-                }
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
+            //    cem.reportFy(wb, 1, o,
+            //        colListC, specialChars, unpH,
+            //        mergeMark, false,"",false,null);
 
-            }
+            //    wb.Save();
+            //}
+            //catch (Exception ex)
+            //{
+            //    classLims_NPOI.WriteLog(ex, "");
+            //}
+            //finally
+            //{
+            //    if (wb != null)
+            //    {
+            //        //wb.Close(false, missing, false);
+            //        wb.Close(false, missing, missing);
+            //        int i = Marshal.ReleaseComObject(wb);
+            //        wb = null;
+            //    }
+            //    if (workBooks != null)
+            //    {
+            //        workBooks.Close();
+            //        int i = Marshal.ReleaseComObject(workBooks);
+            //        workBooks = null;
+            //    }
+            //    if (excel != null)
+            //    {
+            //        excel.Quit();
+            //        int i = Marshal.ReleaseComObject(excel);
+            //        excel = null;
+            //    }
+            //    GC.Collect();
+            //    GC.WaitForPendingFinalizers();
+
+            //}
 
             s = "1234";
             Console.WriteLine(s);
 
             #region 作废的测试代码
+
+            //string cellValue = "P^(u1)S-V_(d1)S^(u2)kk";//需要用正则表达式匹配的字符串
+
+            //object[] o0 = { "序号", "检测项目", "分析项", "样品", "技术要求",
+            //        "单位", "单项结论", "实测值" };
+            //object[] o11 = { "1", "抗摆锤冲击能", "抗摆锤冲击能1", "1#", "总量≦50",
+            //        "J", "符合", "12.3",};
+            //object[] o12 = { "1", "抗摆锤冲击能", "抗摆锤冲击能2", "1#", "总量≦50",
+            //        "J", "符合", "14.3",};
+            //object[] o13 = { "1", "抗摆锤冲击能", "抗摆锤冲击能3", "1#", "总量≦50",
+            //        "J", "符合", "22.3",};
+            //object[] o2 = { "2", "耐跌落性（袋）", "耐跌落性（袋）", "1#", "无渗漏，无破裂",
+            //        "----", "合格", "c" };
+            //object[] o3 = { "3", "甲苯二胺（4%乙酸）", "甲苯二胺（4%乙酸）", "1#", "≤0.004",
+            //        "mg/L", "合格", "未检出" };
+            //object[] o = { o0, o11,o12,o13, o2, o3 };
+            //object[] colListC = { "检测项目", "单位", "单项结论" };
+            //object[] sc1 = { "^p", "\n" };
+            //object[] sc2 = { "≦", "≤" };
+            //object[] sc = { sc1, sc2 };
+            //object[] unpH = { };
+            //object[] mergeMark = { "1", "0" };
+            ////cem.reportFy("D:\\18583溶剂型胶粘剂附页.xls", 1, o, 
+            ////    colListC, sc, unpH,
+            ////    mergeMark, false);
+
+            //object missing = System.Reflection.Missing.Value;
+            //EXCEL.ApplicationClass excel = null;
+            //EXCEL.Workbook wb = null;
+            //EXCEL.Workbooks workBooks = null;
+            //try
+            //{
+            //    excel = new EXCEL.ApplicationClass();
+            //    excel.DisplayAlerts = false;
+            //    workBooks = excel.Workbooks;
+            //    wb = workBooks.Open("D:\\172边框消失.xls", missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing, missing, missing, missing,
+            //        missing, missing);
+
+            //    EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Sheets[2];                
+
+            //    string cellValue = classExcelMthd.getMergerCellValue(sheet, 8, 7);
+            //    //int upStart = cellValue.IndexOf("^u(");//上标开始标记
+            //    //int downStart = cellValue.IndexOf("^d(");//下标开始标记
+            //    //int end = cellValue.IndexOf(")");
+            //    System.Text.RegularExpressions.Regex reg = new System.Text.RegularExpressions.Regex(@"\(([^)]*)\)");
+            //    System.Text.RegularExpressions.Match m = reg.Match(cellValue);
+            //    if (m.Success)
+            //    {
+            //        alert(m.Result("$1"));
+            //    }
+            //    //EXCEL.Range cell = (EXCEL.Range)sheet.Cells[8, 7];
+            //    //cell.Characters[3, 1].Font.Superscript = true;//设置上标
+            //    //cell.Characters[4, 1].Font.Subscript = true;//设置下标
+
+            //    //wb.Save();
+            //}
+            //catch (Exception ex)
+            //{
+            //    classLims_NPOI.WriteLog(ex, "");
+            //}
+            //finally
+            //{
+            //    if (wb != null)
+            //    {
+            //        //wb.Close(false, missing, false);
+            //        wb.Close(false, missing, missing);
+            //        int i = Marshal.ReleaseComObject(wb);
+            //        wb = null;
+            //    }
+            //    if (workBooks != null)
+            //    {
+            //        workBooks.Close();
+            //        int i = Marshal.ReleaseComObject(workBooks);
+            //        workBooks = null;
+            //    }
+            //    if (excel != null)
+            //    {
+            //        excel.Quit();
+            //        int i = Marshal.ReleaseComObject(excel);
+            //        excel = null;
+            //    }
+            //    GC.Collect();
+            //    GC.WaitForPendingFinalizers();
+
+            //}
 
             //WORD.ApplicationClass applicationClass = null;
             //WORD.Document doc = null;
@@ -549,7 +629,6 @@ namespace nsLims_NPOI
 
             button1.Enabled = true;
         }
-
-
+        
     }
 }

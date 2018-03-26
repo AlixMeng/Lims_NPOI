@@ -22,6 +22,45 @@ namespace nsLims_NPOI
             NovaPdfOptions80Class np8 = new NovaPdfOptions80Class();
         }
 
+        /// <summary>
+        /// 报告批准时,excel转pdf,封面和首页只取第一页
+        /// </summary>
+        /// <param name="workBook">工作簿对象</param>
+        /// <param name="toPath">输出路径</param>
+        /// <returns>成功或失败</returns>
+        public static bool ApproveExcelToPdf(EXCEL.Workbook workBook, string toPath)
+        {
+            bool flag = false;
+            object missing = Type.Missing;
+            try
+            {
+                if (toPath.Length == 0)
+                {
+                    flag = false;
+                    throw new Exception("需要转换的目标文件路径不能为空。");
+                }
+
+                List<string> listSheetPdf = new List<string>();
+                string toSheetPdf = "";
+                for (int i = 1; i <= workBook.Sheets.Count; i++)//循环遍历sheet,
+                {
+                    toSheetPdf = "C:\\Windowd\\Temp\\" + Guid.NewGuid().ToString()+".pdf";
+                    SaveExcelWorkSheetAsPDFWithPage(workBook, i, toSheetPdf, 1);//转化sheet页为pdf,只转一页
+                    listSheetPdf.Add(toSheetPdf);
+                }
+                MergePDF mp = new MergePDF();
+                mp.Merge(listSheetPdf.ToString(), toPath);
+                flag = true;
+            }
+            catch (Exception exception)
+            {
+                classLims_NPOI.WriteLog(exception, "");
+                flag = false;
+            }
+            return flag;
+        }
+
+
         #region 把指定EXCEL转换成PDF
         /// <summary>
         /// EXCEL转PDF
@@ -328,7 +367,54 @@ namespace nsLims_NPOI
             return flag;
         }
 
-        //excel批量转为pdf
+        /// <summary>
+        /// 保存sheet页为pdf,指定转化页数
+        /// </summary>
+        /// <param name="workBook"></param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="toPath"></param>
+        /// <param name="toPage"></param>
+        /// <returns></returns>
+        public static bool SaveExcelWorkSheetAsPDFWithPage(EXCEL.Workbook workBook, int sheetIndex, string toPath, int toPage)
+        {
+            bool flag = false;
+            object missing = Type.Missing;
+            try
+            {
+                if (toPath.Length == 0)
+                {
+                    flag = false;
+                    throw new Exception("需要转换的目标文件路径不能为空。");
+                }
+
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)workBook.Sheets[sheetIndex];
+                //sheet.Activate();
+                sheet.ExportAsFixedFormat(
+                    EXCEL.XlFixedFormatType.xlTypePDF,
+                    toPath,
+                    EXCEL.XlFixedFormatQuality.xlQualityStandard,//可设置为 xlQualityStandard 或 xlQualityMinimum。
+                    true,//包含文档属性
+                    false, //如果设置为 True，则忽略在发布时设置的任何打印区域。如果设置为 False，则使用在发布时设置的打印区域。
+                    1,//发布的起始页码。如果省略此参数，则从起始位置开始发布。
+                    toPage,//发布的终止页码。如果省略此参数，则发布至最后一页。
+                    false, //是否发布文件后在查看器中显示文件。
+                    Type.Missing);
+                flag = true;
+            }
+            catch (Exception exception)
+            {
+                classLims_NPOI.WriteLog(exception, "");
+                flag = false;
+            }
+            return flag;
+        }
+        
+        /// <summary>
+        /// excel批量转为pdf
+        /// </summary>
+        /// <param name="fromExcellist"></param>
+        /// <param name="printDir"></param>
+        /// <returns></returns>
         public string[] ExcellistToPDF(string fromExcellist, string printDir)
         {
             string[] strArrays = fromExcellist.Split(new char[] { ',' });//逗号分隔数组

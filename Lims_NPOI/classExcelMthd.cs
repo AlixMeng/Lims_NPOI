@@ -6,6 +6,7 @@ using EXCEL = Microsoft.Office.Interop.Excel;
 //using Microsoft.Office.Interop.Word;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace nsLims_NPOI
 {
@@ -985,6 +986,195 @@ namespace nsLims_NPOI
             }
             return flag;
 
+        }
+
+        //匹配并替换上下标
+        /// <summary>
+        /// 匹配并替换上下标
+        /// </summary>
+        /// <param name="wb">工作簿</param>
+        /// <param name="sheetIndex">工作表索引</param>
+        /// <param name="row">行号</param>
+        /// <param name="col">列号</param>
+        public void cellSuperAndSubscript(EXCEL.Workbook wb, int sheetIndex, int row, int col)
+        {
+            //RegexUpAndDown
+            try
+            {
+                object missing = System.Reflection.Missing.Value;
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Sheets[sheetIndex];
+                string cellValue = getMergerCellValue(sheet, row, col);
+                object[] objs = RegexMatch.RegexUpAndDown(cellValue);//获取替换后字符串和替换位置
+                string acValue = objs[0].ToString();//替换后字符串
+                List<object[]> lp = (List<object[]>)objs[1];//替换位置队列<index,length, TYPE>
+                if (lp.Count > 0 && acValue != cellValue)//成功匹配则替换
+                    ReplaceFlag(wb, sheetIndex, new object[] { new object[] { cellValue, acValue } });
+                EXCEL.Range cell = (EXCEL.Range)sheet.Cells[row, col];
+                for (int i = 0; i < lp.Count; i++)
+                {
+                    if (lp[i][2].ToString().Equals("UP"))
+                    {
+                        cell.Characters[(int)lp[i][0] + 1, (int)lp[i][1]].Font.Superscript = true;//设置上标
+                    }
+                    else if (lp[i][2].ToString().Equals("DOWN"))
+                    {
+                        cell.Characters[(int)lp[i][0] + 1, (int)lp[i][1]].Font.Subscript = true;//设置上标
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+        }
+
+        //匹配并替换上标
+        /// <summary>
+        /// 匹配并替换上标
+        /// </summary>
+        /// <param name="wb">工作簿</param>
+        /// <param name="sheetIndex">工作表索引</param>
+        /// <param name="row">行号</param>
+        /// <param name="col">列号</param>
+        public void cellSuperscript(EXCEL.Workbook wb, int sheetIndex, int row, int col)
+        {
+            try
+            {
+                object missing = System.Reflection.Missing.Value;
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Sheets[sheetIndex];
+                string cellValue = getMergerCellValue(sheet, row, col);
+                object[] objs = RegexMatch.RegexUp(cellValue);//获取替换后字符串和替换位置
+                string acValue = objs[0].ToString();//替换后字符串
+                List<Point> lp = (List<Point>)objs[1];//替换位置队列<index,length>
+                if (lp.Count > 0 && acValue != cellValue)//成功匹配则替换
+                    ReplaceFlag(wb, sheetIndex, new object[] { new object[] { cellValue, acValue } });
+                EXCEL.Range cell = (EXCEL.Range)sheet.Cells[row, col];
+                foreach (Point p in lp)
+                {
+                    cell.Characters[p.X + 1, p.Y].Font.Superscript = true;//设置上标
+                }
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+        }
+
+        //匹配并替换下标
+        /// <summary>
+        /// 匹配并替换下标
+        /// </summary>
+        /// <param name="wb">工作簿</param>
+        /// <param name="sheetIndex">工作表索引</param>
+        /// <param name="row">行号</param>
+        /// <param name="col">列号</param>
+        public void cellSubscript(EXCEL.Workbook wb, int sheetIndex, int row, int col)
+        {
+            try
+            {
+                object missing = System.Reflection.Missing.Value;
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Sheets[sheetIndex];
+                string cellValue = getMergerCellValue(sheet, row, col);
+                object[] objs = RegexMatch.RegexDown(cellValue);//获取替换后字符串和替换位置
+                string acValue = objs[0].ToString();//替换后字符串
+                List<Point> lp = (List<Point>)objs[1];//替换位置队列<index,length>
+                if (lp.Count > 0 && acValue != cellValue)//成功匹配则替换
+                    ReplaceFlag(wb, sheetIndex, new object[] { new object[] { cellValue, acValue } });
+                EXCEL.Range cell = (EXCEL.Range)sheet.Cells[row, col];
+                foreach (Point p in lp)
+                {
+                    cell.Characters[p.X + 1, p.Y].Font.Subscript = true;//设置下标
+                }
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+        }
+
+        /// <summary>
+        /// 检查封面首页页数,应该各为一页
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns>前2个sheet页的页数</returns>
+        public int checkFmSyPages(string filePath)
+        {
+            int pageCount = 0;
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    return 0;
+                }
+                //object missing = Type.Missing;
+                object missing = System.Reflection.Missing.Value;
+
+                //获取sheet个数,小于2个直接返回0
+                classLims_NPOI cem = new classLims_NPOI();
+                int sheetNumber = cem.loadExcelWorkbookI(filePath).NumberOfSheets;
+                if (sheetNumber < 2) return 0;
+
+                EXCEL.ApplicationClass excel = null;
+                EXCEL.Workbook wb = null;
+                EXCEL.Workbooks workBooks = null;
+                try
+                {
+                    excel = new EXCEL.ApplicationClass();
+                    excel.DisplayAlerts = false;
+                    workBooks = excel.Workbooks;
+                    wb = workBooks.Open(filePath, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing, missing, missing, missing,
+                        missing, missing);
+                    //实例化Sheet后,释放Excel进程就会失败
+                    //对于sheet的操作必须放在新的方法中,接口层级为Workbook
+
+                    //先使用分页视图打开,EXCEl获取 HPageBreaks 需要在分页视图中
+                    excel.ActiveWindow.View = EXCEL.XlWindowView.xlPageBreakPreview;
+                    for (int sheetIndex = 0; sheetIndex < sheetNumber && sheetIndex < 2; sheetIndex++)
+                    {
+                        pageCount += getSheetPageCount(wb, sheetIndex + 1);
+                    }
+                    //再还原为普通视图
+                    excel.ActiveWindow.View = EXCEL.XlWindowView.xlNormalView;
+                }
+                catch (Exception ex)
+                {
+                    classLims_NPOI.WriteLog(ex, "");
+                    pageCount = 0;
+                }
+                finally
+                {
+                    if (wb != null)
+                    {
+                        //wb.Close(false, missing, false);
+                        wb.Close(false, missing, missing);
+                        int i = Marshal.ReleaseComObject(wb);
+                        wb = null;
+                    }
+                    if (workBooks != null)
+                    {
+                        workBooks.Close();
+                        int i = Marshal.ReleaseComObject(workBooks);
+                        workBooks = null;
+                    }
+                    if (excel != null)
+                    {
+                        excel.Quit();
+                        int i = Marshal.ReleaseComObject(excel);
+                        excel = null;
+                    }
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                }
+            }
+            catch (Exception e)
+            {
+                classLims_NPOI.WriteLog(e, "");
+                pageCount = 0;
+            }
+            return pageCount;
         }
 
         /// <summary>
@@ -2222,7 +2412,7 @@ namespace nsLims_NPOI
                 }
                 return listFloat.ToArray();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 classLims_NPOI.WriteLog(ex, "");
                 return null;
@@ -2476,7 +2666,7 @@ namespace nsLims_NPOI
         /// <param name="row">行索引</param>
         /// <param name="col">列索引</param>
         /// <returns>返回单元格值,如果在合并区域,则取左上角单元格的值</returns>
-        private static string getMergerCellValue(EXCEL.Worksheet sheet, int row, int col)
+        public static string getMergerCellValue(EXCEL.Worksheet sheet, int row, int col)
         {
             try
             {
@@ -2761,11 +2951,11 @@ namespace nsLims_NPOI
                 }
                 return null;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 classLims_NPOI.WriteLog(ex, "");
                 return null;
-            }            
+            }
         }
 
         /// <summary>
@@ -2910,7 +3100,7 @@ namespace nsLims_NPOI
         }
 
         /// <summary>
-        /// 获取sheet页数,通过垂直分页符个数判断
+        /// 获取sheet页数,打印区域设置判断
         /// </summary>
         /// <param name="wb"></param>
         /// <param name="sheetIndex"></param>
@@ -2919,9 +3109,10 @@ namespace nsLims_NPOI
         {
             EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
 
-            var hpb = sheet.HPageBreaks;
-            int hpbCount = sheet.HPageBreaks.Count;
-            return hpbCount + 1;
+            //var hpb = sheet.HPageBreaks;//垂直分页符
+            //int hpbCount = sheet.HPageBreaks.Count;
+            return sheet.PageSetup.Pages.Count;
+            //return hpbCount + 1;
 
         }
 
@@ -3622,8 +3813,9 @@ namespace nsLims_NPOI
                 #endregion 获取转置区域
 
                 //调整格式
+                sheetSuperAndSubscript(wb, sheetIndex, 1, 2, maxRowIndex, maxColIndex);//处理上下标,要在处理特殊字符之前
                 ReplaceAll(wb, sheetIndex, specialChars);//替换特殊字符
-                if(columnsWidth!=null && columnsWidth.Length>0)//columnsWidth,如果列宽数组有效,则设置附页列宽
+                if (columnsWidth != null && columnsWidth.Length > 0)//columnsWidth,如果列宽数组有效,则设置附页列宽
                 {
                     setSheetColumnsWidth(wb, sheetIndex, columnsWidth);
                 }
@@ -3752,9 +3944,9 @@ namespace nsLims_NPOI
                 int maxRowIndex = getSheetMaxRowCol(sheet).X;
 
                 string[] tableHead = classLims_NPOI.dArray2String1((object[])dArray[0]);//最开始的行为表头
-                
+
                 int[] colHeadSeq = getArraySequen(sheet, tableHead, "&[", "]", maxRowIndex, maxColIndex); //获取表头在模板中的顺序,表头数据无标记符号&[],需要添加
-               
+
                 object[,] seqArray2 = getSequenArray2(colHeadSeq, classLims_NPOI.dArray2Array2(dArray));//获取排序后的二维数组
                 //Dictionary<int, string[]> dic = classLims_NPOI.dArray2ToDictionary2(seqArray2);
 
@@ -3946,6 +4138,8 @@ namespace nsLims_NPOI
                     string cellMergedValue = getMergerCellValue(sheet, p.X, p.Y);
                     string newValue = cellMergedValue.Replace(key, value);
                     cell.Value = newValue;
+
+                    cellSuperAndSubscript(wb, sheetIndex, p.X, p.Y);//按规则替换上下标字符串
                     ////xlPart代表匹配任一部分搜索文本。, xlWhole代表匹配全部搜索文本。
                     //cell.Replace(key, value, EXCEL.XlLookAt.xlPart, EXCEL.XlSearchOrder.xlByRows, missing, missing, missing, missing);
 
@@ -4040,7 +4234,7 @@ namespace nsLims_NPOI
         /// <param name="wb">工作簿对象</param>
         /// <param name="sheetIndex">工作表索引</param>
         /// <param name="dArray">特殊字符数组数据,N x 2的二维数组,如{{'.','。'}}</param>
-        private static void ReplaceAll(EXCEL.Workbook wb, int sheetIndex, object[] dArray)
+        public static void ReplaceAll(EXCEL.Workbook wb, int sheetIndex, object[] dArray)
         {
             object missing = System.Reflection.Missing.Value;
             EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
@@ -4240,12 +4434,12 @@ namespace nsLims_NPOI
                 float[] fColumnsWidth = classLims_NPOI.dArray2float(columnsWidth);
                 for (int i = 0; i < fColumnsWidth.Length; i++)
                 {
-                    EXCEL.Range column = (EXCEL.Range)sheet.Columns[i+1];
+                    EXCEL.Range column = (EXCEL.Range)sheet.Columns[i + 1];
                     column.ColumnWidth = fColumnsWidth[i];
                     //classLims_NPOI.WriteLog("当前列:"+(i+1).ToString()+", 列宽:"+ fColumnsWidth[i].ToString(),"");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 classLims_NPOI.WriteLog(ex, "");
                 return;
@@ -4358,8 +4552,8 @@ namespace nsLims_NPOI
             {
                 //按值查找,将匹配含公式单元格的结果,而不是公式中的关键字
                 EXCEL.Range position = sheet.Cells.Find(
-                    value, 
-                    Missing.Value, 
+                    value,
+                    Missing.Value,
                     EXCEL.XlFindLookIn.xlValues,//按值匹配
                     EXCEL.XlLookAt.xlPart,//部分匹配,不需要全匹配
                     EXCEL.XlSearchOrder.xlByRows,//按行搜索
@@ -4482,6 +4676,37 @@ namespace nsLims_NPOI
         //        return;
         //    }
         //}
+
+        //匹配并替换工作表上下标
+        /// <summary>
+        /// 匹配并替换工作表上下标
+        /// </summary>
+        /// <param name="wb">工作簿对象</param>
+        /// <param name="sheetIndex">工作表</param>
+        /// <param name="startRow">起始行</param>
+        /// <param name="startCol">起始列</param>
+        /// <param name="endRow">结束行</param>
+        /// <param name="endCol">结束列</param>
+        public void sheetSuperAndSubscript(EXCEL.Workbook wb, int sheetIndex, int startRow=1, int startCol=1, int endRow=1, int endCol=1)
+        {
+            //RegexUpAndDown
+            try
+            {
+                object missing = System.Reflection.Missing.Value;
+                EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Sheets[sheetIndex];
+
+                foreach(EXCEL.Range tempCell in sheet.get_Range(sheet.Cells[startRow, startCol], sheet.Cells[endRow, endCol]).Cells)//遍历每个格子
+                {
+                    int rowIndex = tempCell.Row;
+                    int colIndex = tempCell.Column;
+                    cellSuperAndSubscript(wb, sheetIndex, rowIndex, colIndex);
+                }
+            }
+            catch (Exception ex)
+            {
+                classLims_NPOI.WriteLog(ex, "");
+            }
+        }
 
         #endregion excel的sheet页操作
 
@@ -4619,11 +4844,15 @@ namespace nsLims_NPOI
                         lastMarkRange.VerticalAlignment = EXCEL.XlVAlign.xlVAlignTop;
                         lastMarkRange.HorizontalAlignment = EXCEL.XlVAlign.xlVAlignCenter;
 
-                        EXCEL.Range lastRange = sheet.get_Range(sheet.Cells[lRow, 1], sheet.Cells[i - 1, endCol]);
-                        //设置边框为外框线
-                        object missing = System.Reflection.Missing.Value;
-                        lastRange.Borders.LineStyle = EXCEL.XlLineStyle.xlLineStyleNone;
-                        lastRange.BorderAround2(EXCEL.XlLineStyle.xlContinuous, EXCEL.XlBorderWeight.xlThin, EXCEL.XlColorIndex.xlColorIndexAutomatic, missing, missing);
+                        //当分页最后一行大于以下空白行时,设置为外边框,相等时不用设置,小于则属异常
+                        if (i > lRow)
+                        {
+                            EXCEL.Range lastRange = sheet.get_Range(sheet.Cells[lRow, 1], sheet.Cells[i - 1, endCol]);
+                            //设置边框为外框线
+                            object missing = System.Reflection.Missing.Value;
+                            lastRange.Borders.LineStyle = EXCEL.XlLineStyle.xlLineStyleNone;
+                            lastRange.BorderAround2(EXCEL.XlLineStyle.xlContinuous, EXCEL.XlBorderWeight.xlThin, EXCEL.XlColorIndex.xlColorIndexAutomatic, missing, missing);
+                        }
                         break;
                     }
                     else
@@ -4804,7 +5033,7 @@ namespace nsLims_NPOI
             }
 
         }
-        
+
 
         /// <summary>
         /// sheet页取消保护
@@ -4819,9 +5048,9 @@ namespace nsLims_NPOI
                 EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
                 sheet.Unprotect(password);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                classLims_NPOI.WriteLog(ex,"");
+                classLims_NPOI.WriteLog(ex, "");
             }
         }
 
