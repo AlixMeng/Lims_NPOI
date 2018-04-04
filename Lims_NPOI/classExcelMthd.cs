@@ -3813,8 +3813,8 @@ namespace nsLims_NPOI
                 #endregion 获取转置区域
 
                 //调整格式
-                sheetSuperAndSubscript(wb, sheetIndex, 1, 2, maxRowIndex, maxColIndex);//处理上下标,要在处理特殊字符之前
-                ReplaceAll(wb, sheetIndex, specialChars);//替换特殊字符
+                //sheetSuperAndSubscript(wb, sheetIndex, 1, 2, maxRowIndex, maxColIndex);//处理上下标,要在处理特殊字符之前
+                ReplaceAll(wb, sheetIndex, new object[] { new object[] { ";", "；" } });//替换特殊字符,英文分号会对上下标正则表达式匹配造成影响
                 if (columnsWidth != null && columnsWidth.Length > 0)//columnsWidth,如果列宽数组有效,则设置附页列宽
                 {
                     setSheetColumnsWidth(wb, sheetIndex, columnsWidth);
@@ -3823,6 +3823,7 @@ namespace nsLims_NPOI
                 mergeRows(wb, sheetIndex, startRow, unpivotRange, maxColIndex, unpivotMerge); //合并转置列
                 mergeCells(wb, sheetIndex, colseq, startRow, maxColIndex);//合并相同检测项目的同列数据
                 wb = setAutoRowHeight(wb, sheetIndex, startRow, 1, maxColIndex);//设置行高,workbook使用宏,需要返回对象
+                ReplaceAll(wb, sheetIndex, specialChars);//替换特殊字符,必须在运行设置行高宏之后,因为宏里面要用到英文字符
                 dealMergedAreaInPages_new(wb, sheetIndex, maxColIndex, colseq);//跨页的要分开,只处理需要合并的列,多实测值模板不拆分实测值的合并
                 mergeTestCell(wb, sheetIndex, "检测项目", "分析项", maxColIndex);//合并表头的"检测项目","分析项"2个单元格
                 if (hasImage)//是否有图片附页,有的话需要改附页最后一行的"以下空白"为"此页以下空白"
@@ -4238,7 +4239,7 @@ namespace nsLims_NPOI
         {
             object missing = System.Reflection.Missing.Value;
             EXCEL.Worksheet sheet = (EXCEL.Worksheet)wb.Worksheets[sheetIndex];
-
+            wb.Application.DisplayAlerts = false;
             EXCEL.Range excelRange = (EXCEL.Range)sheet.Rows;
             string oldStr;
             string newStr;

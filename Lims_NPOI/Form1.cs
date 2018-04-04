@@ -60,12 +60,14 @@ namespace nsLims_NPOI
 
             //classLims_NPOI cln = new classLims_NPOI();
             //ConvertbyPrinter cbp = new ConvertbyPrinter();
-            classExcelMthd cem = new classExcelMthd();
+            //classExcelMthd cem = new classExcelMthd();
             //ImgConvert ic = new ImgConvert();
             //DocXAction dxa = new DocXAction();
             //MergePDF mpf = new MergePDF();
             //FileConvertClass fcc = new FileConvertClass();
-            
+            RegexMatch rm;
+
+            var objs = RegexMatch.RegexUpAndDown("321.1HV_(30.00);322.1HV_(30.00);322.5HV^(30.00);");
             object[] o0 = { "序号", "检测项目",         "分析项",            "样品", "单位",  "技术要求", "实测值",                  "单项结论" };
             object[] o1 = { "1",    "绝缘最薄处厚度",   "绝缘最薄处厚度",    "1#",   "mm",     "≥0.62",  "P^(u1)S-V_(d1)S^(u2)kk",  "P" };
             object[] o2 = { "2",    "导体电阻（20℃）", "导体电阻（20℃）",  "1#",   "Ω/ km", "≤7.41",  "X^(u1)S-C_(d1)S^(u2)mm",  "P" };
